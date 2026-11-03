@@ -17,20 +17,20 @@ def now():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def terms(text):
+def terms(text, unique=True):
     text = text.lower()
     tokens = re.findall(r"[a-z0-9]+(?:[._-][a-z0-9]+)*", text)
     for block in re.findall(r"[\u4e00-\u9fff]+", text):
         tokens.extend(block[i:i + 2] for i in range(len(block) - 1))
         if len(block) == 1:
             tokens.append(block)
-    return list(dict.fromkeys(tokens))
+    return list(dict.fromkeys(tokens)) if unique else tokens
 
 
 ALIASES = [
     ("视频", "短片", "剪辑", "video"), ("图片", "图像", "绘图", "image"),
     ("抠图", "背景移除", "前景分离", "matting"),
-    ("转写", "语音识别", "字幕", "transcribe", "asr"),
+    ("转写", "转录", "语音识别", "字幕", "录音转文字", "录音变成文字", "音频转文字", "transcribe", "asr"),
     ("三维", "3d", "建模", "重建"), ("编程", "代码", "coding"),
     ("智能体", "agent", "助手"), ("音乐", "作曲", "midi"),
     ("配音", "语音合成", "tts"), ("网页", "网站", "前端"),
@@ -129,6 +129,12 @@ class Knowledge:
                     key = "U" + hashlib.sha256((batch.name + "|" + fingerprint).encode()).hexdigest()[:12]
                     self._insert(db, item, key, "精选批次导入：" + batch.name)
                 db.execute("INSERT INTO settings VALUES (?,?)", (marker, now()))
+            # Rebuild only the derived index, preserving records and user revisions.
+            index_version = db.execute("SELECT value FROM settings WHERE key='search_index_version'").fetchone()
+            if not index_version or index_version[0] != '2':
+                for row in db.execute("SELECT * FROM entries").fetchall():
+                    self._index(db, row['id'], self.decode(row))
+                db.execute("INSERT OR REPLACE INTO settings VALUES ('search_index_version','2')")
 
     @contextmanager
     def connect(self):
@@ -147,9 +153,10 @@ class Knowledge:
 
     def _index(self, db, key, item):
         db.execute("DELETE FROM search_index WHERE id=?", (key,))
-        text = " ".join([item["name"]] * 5 + [item["category"], item["type"]] * 3 +
+        text = " ".join([item["name"]] * 6 + [item["category"], item["type"]] * 3 +
+                        [item["function"], item["scenario"]] * 2 +
                         [item.get(k, "") for k in TEXT_FIELDS])
-        db.execute("INSERT INTO search_index VALUES (?,?)", (key, " ".join(terms(text))))
+        db.execute("INSERT INTO search_index VALUES (?,?)", (key, " ".join(terms(text, unique=False))))
 
     def _insert(self, db, raw, key=None, reason="手动新增"):
         item = normalize(raw)
@@ -188,6 +195,25 @@ class Knowledge:
         clause = " AND ".join(where)
         with self.connect() as db:
             if query.strip():
+                # A named lookup should not expand into hundreds of installation
+                # documents just because the query also contains common words.
+                named = []
+                lowered = query.casefold().strip()
+                if not re.search(r"替代|类似|同类|alternative|similar", lowered):
+                    for row in db.execute("SELECT DISTINCT name FROM entries"):
+                        name = row['name'].casefold()
+                        if re.search(r"[a-z0-9]", name):
+                            found = bool(re.search(r"(?<![a-z0-9])" + re.escape(name) + r"(?![a-z0-9])", lowered))
+                        else:
+                            found = len(name) >= 3 and name in lowered
+                        if found:
+                            named.append(row['name'])
+                if named:
+                    marks = ','.join('?' for _ in named)
+                    records = db.execute(f"SELECT e.* FROM entries e WHERE {clause} AND name IN ({marks}) ORDER BY date DESC, name",
+                                         params + named).fetchall()
+                    records = sorted(records, key=lambda r: (r['name'].casefold() == lowered, len(r['name'])), reverse=True)
+                    return {"items": [self.decode(r) for r in records[offset:offset+limit]], "total": len(records)}
                 expanded = query.lower()
                 for group in ALIASES:
                     if any(word in expanded for word in group):

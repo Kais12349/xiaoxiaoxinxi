@@ -25,6 +25,7 @@ def run():
         assert any('Code2Video' == s['name'] for s in results[0]['sources'])
         assert any('Ruby' == s['name'] for s in results[1]['sources'])
         assert any(x in results[2]['answer'] for x in ['没有', '未找到', '未收录', '查不到', '不存在'])
+        assert results[2]['sources'] == [], 'An unknown project must not inherit unrelated historical citations'
         assert len(client.get('/api/sessions/'+session+'/messages').json()) == 6
         print('LIVE_CHECK_PASSED', flush=True)
 

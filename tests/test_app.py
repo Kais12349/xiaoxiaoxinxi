@@ -63,6 +63,30 @@ class StoreTests(unittest.TestCase):
         reopened = Knowledge(self.db,ROOT/'data/knowledge.json')
         self.assertEqual(reopened.get(row['id'])['function'],'独特修订用途')
 
+    def test_named_followups_and_comparisons_stay_on_topic(self):
+        found = self.store.search('AnythingLLM 桌面版 安装 文档 工作空间 嵌入模型')
+        self.assertEqual(found['total'],1)
+        self.assertEqual(found['items'][0]['name'],'AnythingLLM')
+        comparison = self.store.search('Dify 和 AnythingLLM 的区别')
+        self.assertEqual({r['name'] for r in comparison['items']},{'Dify','AnythingLLM'})
+        self.assertEqual(self.store.search('AnythingLLM',end_date='2026-11-01')['total'],0)
+        self.assertGreater(self.store.search('AnythingLLM 类似工具')['total'],1)
+        self.assertEqual(self.store.search('notAnythingLLMunknown')['total'],0)
+
+    def test_search_index_upgrade_preserves_edits_and_revisions(self):
+        row = self.store.add({'name':'升级保留测试','function':'最初用途'})
+        changed = self.store.update(row['id'],{**row,'function':'迁移后仍可搜索的独特词'},1)
+        with self.store.connect() as db:
+            db.execute("DELETE FROM settings WHERE key='search_index_version'")
+            db.execute('DELETE FROM search_index')
+        reopened = Knowledge(self.db,ROOT/'data/knowledge.json')
+        self.assertEqual(reopened.get(row['id']),changed)
+        self.assertEqual(len(reopened.revisions(row['id'])),2)
+        self.assertEqual(reopened.search('迁移后仍可搜索的独特词')['items'][0]['id'],row['id'])
+        with reopened.connect() as db:
+            tokens = db.execute('SELECT tokens FROM search_index WHERE id=?',(row['id'],)).fetchone()[0]
+            self.assertGreater(tokens.split().count('升级'),1)
+
     def test_import_export_csv_duplicates_and_atomicity(self):
         result = self.store.import_text('original.csv',(ROOT/'信息清单.csv').read_text(encoding='utf-8-sig'))
         self.assertEqual(result,{'added':0,'skipped':362})
@@ -165,6 +189,8 @@ class ApiTests(unittest.TestCase):
 
     def test_routes_validate_and_do_not_expose_secrets(self):
         self.assertEqual(self.client.get('/').status_code,200)
+        self.assertEqual(self.client.get('/').headers['cache-control'],'no-cache')
+        self.assertEqual(self.client.get('/static/app.js').headers['cache-control'],'no-cache')
         self.assertEqual(self.client.get('/api/status').json()['knowledge']['count'],TOTAL)
         self.assertEqual(self.client.get('/.env.local').status_code,404)
         self.assertEqual(self.client.get('/static/../.env.local').status_code,404)
@@ -218,6 +244,39 @@ class ApiTests(unittest.TestCase):
 
 
 class AgentTests(unittest.IsolatedAsyncioTestCase):
+    async def test_unknown_followup_does_not_reuse_previous_sources(self):
+        with tempfile.TemporaryDirectory() as folder:
+            store = Knowledge(Path(folder)/'unknown.sqlite3',ROOT/'data/knowledge.json')
+            previous = store.search('faster-whisper')['items'][0]
+            class Stub(KnowledgeAgent):
+                count = 0
+                async def _complete(self,messages,**kwargs):
+                    self.count += 1
+                    if self.count == 1:
+                        return {'tool_calls':[{'id':'call_empty','type':'function','function':{
+                            'name':'search_knowledge','arguments':'{"query":"XYZ987"}'}}]}
+                    return {'content':'知识库未收录这个项目。'}
+            history = [{'role':'assistant','content':'转写项目介绍','refs':[previous]}]
+            events = []
+            async def progress(event):
+                events.append(event)
+            result = await Stub(store,'fixture').answer('XYZ987',history,progress)
+            self.assertEqual(result['sources'],[])
+            self.assertIn('找到0条',result['steps'][0]['label'])
+            self.assertIn('phase',[event['type'] for event in events])
+
+    async def test_followup_can_explicitly_cite_refreshed_historical_source(self):
+        with tempfile.TemporaryDirectory() as folder:
+            store = Knowledge(Path(folder)/'refresh.sqlite3',ROOT/'data/knowledge.json')
+            previous = store.search('faster-whisper')['items'][0]
+            updated = store.update(previous['id'],{**previous,'notes':'用户修订已生效'},1)
+            class Stub(KnowledgeAgent):
+                async def _complete(self,messages,**kwargs):
+                    assert '用户修订已生效' in messages[0]['content']
+                    return {'content':'这是更新后的来源 ['+previous['id']+']'}
+            result = await Stub(store,'fixture').answer('继续说明',[{'role':'assistant','content':'先前回答','refs':[previous]}])
+            self.assertEqual(result['sources'],[updated])
+
     async def test_real_tool_dispatch_and_citation_validation(self):
         with tempfile.TemporaryDirectory() as folder:
             store = Knowledge(Path(folder)/'agent.sqlite3',ROOT/'data/knowledge.json')
