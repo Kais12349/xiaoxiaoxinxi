@@ -112,6 +112,23 @@ class Knowledge:
                 for i, raw in enumerate(seed):
                     self._insert(db, raw, f"K{i+1:04d}", "初始资料导入")
                 db.execute("INSERT INTO settings VALUES ('seed_imported',?)", (now(),))
+            # Published batches also reach existing databases, without replacing edits.
+            # Filenames are immutable batch identifiers; corrections use a new batch.
+            for batch in sorted((Path(seed_path).parent / "collections").glob("*.json")):
+                marker = "collection:" + batch.name
+                if db.execute("SELECT 1 FROM settings WHERE key=?", (marker,)).fetchone():
+                    continue
+                rows = json.loads(batch.read_text(encoding="utf-8"))
+                if not isinstance(rows, list) or len(rows) > 1000:
+                    raise ValueError("收录批次须为最多1000条的数组：" + batch.name)
+                items = [normalize(raw) for raw in rows]
+                for item in items:
+                    fingerprint = self.fingerprint(item)
+                    if db.execute("SELECT 1 FROM entries WHERE fingerprint=?", (fingerprint,)).fetchone():
+                        continue
+                    key = "U" + hashlib.sha256((batch.name + "|" + fingerprint).encode()).hexdigest()[:12]
+                    self._insert(db, item, key, "精选批次导入：" + batch.name)
+                db.execute("INSERT INTO settings VALUES (?,?)", (marker, now()))
 
     @contextmanager
     def connect(self):

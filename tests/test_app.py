@@ -1,9 +1,11 @@
 import asyncio
 import json
 import os
+import shutil
 import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
 
@@ -14,6 +16,8 @@ from knowledge import Knowledge
 from main import create_app
 
 ROOT = Path(__file__).resolve().parents[1]
+BATCH = ROOT / 'data/collections/github-2026-11-03.json'
+TOTAL = 382
 
 
 class StoreTests(unittest.TestCase):
@@ -28,8 +32,11 @@ class StoreTests(unittest.TestCase):
     def test_seed_coverage_idempotence_and_dates(self):
         stats = self.store.stats()
         self.assertEqual((stats['count'], len(stats['dates']), stats['first_date'], stats['last_date']),
-                         (362,17,'2026-07-12','2026-11-01'))
-        self.assertEqual(Knowledge(self.db, ROOT / 'data/knowledge.json').stats()['count'],362)
+                         (TOTAL,18,'2026-07-12','2026-11-03'))
+        self.assertEqual(Knowledge(self.db, ROOT / 'data/knowledge.json').stats()['count'],TOTAL)
+        historical = self.store.search(end_date='2026-11-01',limit=1000)
+        self.assertEqual(historical['total'],362)
+        self.assertEqual(len({r['date'] for r in historical['items']}),17)
         rows = self.store.search(start_date='2026-11-01',end_date='2026-11-01',limit=100)['items']
         self.assertTrue(rows)
         self.assertTrue(all(r['date'] == '2026-11-01' for r in rows))
@@ -61,12 +68,75 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(result,{'added':0,'skipped':362})
         with self.assertRaises(ValueError):
             self.store.import_text('bad.json',json.dumps([{'name':'有效','function':'可导入'}, {'name':'缺少用途'}]))
-        self.assertEqual(self.store.stats()['count'],362)
+        self.assertEqual(self.store.stats()['count'],TOTAL)
         for url in ['javascript:alert(1)','https://user:pass@example.com','not-url']:
             with self.assertRaises(ValueError):
                 self.store.add({'name':'不安全链接','function':'测试','links':[url]})
         result = self.store.import_text('note.md','# 手工文档\n这是关于火星草莓的资料。')
         self.assertEqual(result['added'],1)
+
+    def test_curated_sources_and_retrieval(self):
+        rows = json.loads(BATCH.read_text(encoding='utf-8'))
+        metadata = json.loads((ROOT/'data/github-2026-11-03.metadata.json').read_text(encoding='utf-8'))
+        self.assertEqual(len(rows),20)
+        self.assertEqual(len(metadata['selected']),20)
+        self.assertFalse(metadata['installation_tested'])
+        for source,row in zip(metadata['selected'],rows):
+            self.assertGreaterEqual(source['stargazers_count'],5000)
+            self.assertFalse(source['archived'])
+            self.assertGreaterEqual(source['commit']['date'],'2026-08-05')
+            self.assertEqual(row['links'],[source['html_url']])
+            self.assertIn(source['readme_url'],row['additional_links'])
+            self.assertIn(source['license_url'],row['additional_links'])
+            self.assertIn(source['commit']['sha'],source['readme_url'])
+            self.assertEqual(row['date'],'2026-11-03')
+            self.assertEqual(row['reported_claim'],'')
+            self.assertIn('未安装实测',row['status'])
+            result = self.store.search(row['name'])['items'][0]
+            self.assertEqual(result['name'],row['name'])
+        self.assertEqual(self.store.import_text(BATCH.name,BATCH.read_text(encoding='utf-8')),
+                         {'added':0,'skipped':20})
+
+    def test_collection_upgrades_existing_database_and_preserves_edits(self):
+        data = Path(self.tmp.name)/'upgrade'
+        data.mkdir()
+        seed = data/'knowledge.json'
+        shutil.copyfile(ROOT/'data/knowledge.json',seed)
+        db = data/'existing.sqlite3'
+        old = Knowledge(db,seed)
+        self.assertEqual(old.stats()['count'],362)
+        row = json.loads(BATCH.read_text(encoding='utf-8'))[0]
+        manual = old.add({**row,'function':'用户已补充的 Dify 使用经验'})
+        (data/'collections').mkdir()
+        shutil.copyfile(BATCH,data/'collections'/BATCH.name)
+        upgraded = Knowledge(db,seed)
+        self.assertEqual(upgraded.stats()['count'],TOTAL)
+        self.assertEqual(upgraded.get(manual['id'])['function'],'用户已补充的 Dify 使用经验')
+        imported = upgraded.search('Docling')['items'][0]
+        upgraded.update(imported['id'],{**imported,'date':'2026-11-04','name':'Docling 手工修订'},1)
+        reopened = Knowledge(db,seed)
+        self.assertEqual(reopened.stats()['count'],TOTAL)
+        self.assertEqual(reopened.get(imported['id'])['name'],'Docling 手工修订')
+        self.assertEqual(len(reopened.revisions(imported['id'])),2)
+        self.assertEqual(reopened.search('LangGraph')['items'][0]['id'],
+                         self.store.search('LangGraph')['items'][0]['id'])
+
+    def test_invalid_collection_rolls_back_batches_and_markers(self):
+        data = Path(self.tmp.name)/'invalid'
+        data.mkdir()
+        seed = data/'knowledge.json'
+        shutil.copyfile(ROOT/'data/knowledge.json',seed)
+        db = data/'existing.sqlite3'
+        Knowledge(db,seed)
+        batches = data/'collections'
+        batches.mkdir()
+        (batches/'a-valid.json').write_text(json.dumps([{'name':'先导入项目','function':'有效用途'}]),encoding='utf-8')
+        (batches/'z-invalid.json').write_text(json.dumps([{'name':'有效行','function':'有效'}, {'name':'缺用途'}]),encoding='utf-8')
+        with self.assertRaises(ValueError):
+            Knowledge(db,seed)
+        with closing(sqlite3.connect(db)) as connection:
+            self.assertEqual(connection.execute('SELECT count(*) FROM entries').fetchone()[0],362)
+            self.assertEqual(connection.execute("SELECT count(*) FROM settings WHERE key LIKE 'collection:%'").fetchone()[0],0)
 
 
 class FakeAgent:
@@ -95,7 +165,7 @@ class ApiTests(unittest.TestCase):
 
     def test_routes_validate_and_do_not_expose_secrets(self):
         self.assertEqual(self.client.get('/').status_code,200)
-        self.assertEqual(self.client.get('/api/status').json()['knowledge']['count'],362)
+        self.assertEqual(self.client.get('/api/status').json()['knowledge']['count'],TOTAL)
         self.assertEqual(self.client.get('/.env.local').status_code,404)
         self.assertEqual(self.client.get('/static/../.env.local').status_code,404)
         self.assertEqual(self.client.get('/archive/anything').status_code,404)
@@ -113,9 +183,9 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(changed['version'],2)
         self.assertEqual(self.client.put('/api/knowledge/'+row['id'],json=row).status_code,400)
         exported = self.client.get('/api/export').json()
-        self.assertEqual(len(exported),363)
+        self.assertEqual(len(exported),TOTAL+1)
         result = self.client.post('/api/import',json={'filename':'backup.json','content':json.dumps(exported)}).json()
-        self.assertEqual(result,{'added':0,'skipped':363})
+        self.assertEqual(result,{'added':0,'skipped':TOTAL+1})
 
     def test_missing_key_reports_error_without_fake_answer_or_history(self):
         session = self.client.post('/api/sessions').json()['id']
