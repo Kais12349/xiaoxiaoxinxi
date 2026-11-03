@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#163f37"><title>小小信息 · AI 知识库</title><link rel="icon" href="data:,"><link rel="stylesheet" href="/static/styles.css"><script src="/static/app.js" defer></script></head>
+<body>
+<aside class="sidebar">
+  <a class="brand" href="/" aria-label="小小信息首页"><span class="brand-icon">小</span><span>小小信息<small>把信息，慢慢变成知识</small></span></a>
+  <button id="new-chat" class="primary new-chat">＋ 开始新对话</button>
+  <nav aria-label="主导航"><button id="nav-chat" class="nav active">◈ <span>知识问答</span><span class="nav-arrow">↗</span></button><button id="nav-library" class="nav">▤ <span>浏览知识库</span><span id="nav-count" class="badge">362</span></button></nav>
+  <div class="history-label">最近的对话</div><div id="session-list" class="session-list"></div>
+  <div class="sidebar-bottom"><span class="live-dot"></span> 本地知识，持续积累 <small>产品君「一周 AI 大事」资料库<br>2026.07.12 — 2026.11.01</small></div>
+</aside>
+<main>
+  <header><div><span class="eyebrow">YOUR AI KNOWLEDGE SPACE</span><p id="page-label">知识问答 <span>/ 有来源的回答</span></p></div><div class="header-actions"><button id="mobile-history" class="outline">对话</button><button id="add-top" class="outline">＋ 补充资料</button></div></header>
+  <section id="chat-view" class="chat-view">
+    <div id="welcome" class="welcome"><div class="intro-tag"><span class="live-dot"></span> 已连接你的 AI 资料库</div><h1>信息很多，<br>从一个好问题开始。</h1><p class="lead">找工具、了解用途、比较方案。<br>让每一次提问，都有资料可循。</p>
+      <div class="stat-strip"><div><strong id="stat-count">362</strong><span>条项目与动态</span></div><div><strong id="stat-weeks">17</strong><span>期每周记录</span></div><div><strong>可追溯</strong><span>引用 · 来源 · 修订</span></div></div>
+      <div class="suggestion-label">不妨从这里开始 <span>↙</span></div><div class="suggestions"><button data-prompt="Code2Video 是做什么的？具体怎么用，适合什么场景？"><span class="suggestion-icon">↗</span><b>认识一个项目</b><span>Code2Video 能帮我做什么？</span></button><button data-prompt="Ruby 和 Code2Video 的用途有什么区别？分别适合谁？"><span class="suggestion-icon">⇄</span><b>比较两种工具</b><span>Ruby 和 Code2Video 怎么选？</span></button><button data-prompt="2026年11月1日那期，有哪些与视频创作有关的项目？按用途介绍，并说明资料的核对情况。"><span class="suggestion-icon">▦</span><b>按时间找信息</b><span>11 月 1 日的视频创作工具</span></button></div>
+    </div>
+    <div id="conversation" class="conversation" aria-live="polite"></div>
+    <div class="composer-wrap"><div id="run-status" class="run-status" role="status"></div><form id="chat-form" class="composer"><label class="sr-only" for="question">向知识库提问</label><textarea id="question" rows="2" maxlength="5000" placeholder="问问已有资料里的项目、用途和发布动态…"></textarea><div class="composer-bottom"><span>◈ 基于知识库回答 <span class="desktop-hint">· Enter 发送 / Shift + Enter 换行</span></span><button id="send" class="send" type="submit" aria-label="发送问题">↑</button></div></form><p class="footnote">资料含作者摘要和用途示例，部分主张尚未独立核实。请结合原始来源判断。</p></div>
+  </section>
+  <section id="library-view" class="library-view" hidden><div class="section-heading"><div><span class="eyebrow">GROW YOUR KNOWLEDGE</span><h1>每一条信息，都有来处。</h1><p>浏览、补充和修订资料，让下一次回答更有依据。</p></div><div class="library-actions"><button id="import-button" class="outline">导入资料</button><button id="export-button" class="outline">导出备份 ↗</button><input id="import-file" type="file" accept=".json,.csv,.md,.txt" hidden></div></div>
+    <form id="filters" class="filters"><label class="search-box"><span>⌕</span><input id="search" placeholder="搜索项目名称或具体用途" aria-label="搜索知识库"></label><select id="category" aria-label="类别"><option value="">全部类别</option></select><input id="start-date" type="date" aria-label="开始日期"><span>至</span><input id="end-date" type="date" aria-label="结束日期"><button type="submit" class="primary">筛选</button><button id="reset-filters" type="button" class="text-button">重置</button></form>
+    <div class="results-heading"><span id="results-count">正在读取资料…</span><span>日期从近到远 · 搜索按相关性</span></div><div id="knowledge-list" class="knowledge-grid"></div><div class="pagination"><button id="previous" class="outline">← 上一页</button><span id="page-number"></span><button id="next" class="outline">下一页 →</button></div>
+    <div class="archives">原始整理文件：<a href="/archive/timeline">时间线 HTML ↓</a><a href="/archive/markdown">详细说明 Markdown ↓</a><a href="/archive/csv">信息清单 CSV ↓</a></div>
+  </section>
+</main>
+<dialog id="detail-dialog" class="detail-dialog"><div class="dialog-top"><span>知识条目</span><button class="close-dialog" aria-label="关闭详情">×</button></div><div id="detail-body"></div></dialog>
+<dialog id="edit-dialog"><div class="dialog-top"><span id="edit-title">补充资料</span><button class="close-dialog" aria-label="关闭编辑">×</button></div><form id="entry-form"><p class="form-intro">保存后即可用于提问。请写清用途、来源和核对情况。</p><input type="hidden" name="id"><input type="hidden" name="version"><div class="form-row"><label>项目名称 *<input name="name" required maxlength="200"></label><label>记录日期 *<input name="date" type="date" required></label></div><div class="form-row"><label>类别<input name="category" placeholder="例如：视频、智能体、补充资料"></label><label>机构<input name="organization"></label></div><label>具体用途 *<textarea name="function" required rows="4" maxlength="30000" placeholder="它解决什么问题？输入什么、输出什么？"></textarea></label><label>适用场景<textarea name="scenario" rows="2"></textarea></label><label>使用方式<textarea name="workflow" rows="2"></textarea></label><label>限制与注意<textarea name="limitations" rows="2"></textarea></label><label>来源链接（每行一个）<textarea name="links" rows="2" placeholder="https://..."></textarea></label><label>核对情况<textarea name="verification" rows="2" placeholder="例如：已阅读官方文档；功能尚未实测"></textarea></label><label>补充说明<textarea name="notes" rows="2"></textarea></label><label id="reason-label" hidden>本次修改说明<input name="reason" placeholder="例如：补充官方链接、修正用途"></label><div id="save-error" class="form-error" role="alert"></div><div class="form-footer"><span>修改会保留版本记录</span><button id="save-entry" class="primary" type="submit">保存资料</button></div></form></dialog>
+<dialog id="auth-dialog"><div class="dialog-top">访问知识库</div><form id="auth-form"><label>访问口令<input id="access-token" type="password" required autocomplete="current-password"></label><button class="primary" type="submit">进入</button></form></dialog>
+<dialog id="history-dialog"><div class="dialog-top"><span>最近的对话</span><button class="close-dialog" aria-label="关闭对话列表">×</button></div><div class="mobile-history-body"><button id="mobile-new-chat" class="primary">＋ 开始新对话</button><div id="mobile-session-list"></div></div></dialog>
+<div id="toast" class="toast" role="status" hidden></div>
+</body></html>

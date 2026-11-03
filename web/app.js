@@ -1,0 +1,153 @@
+'use strict';
+const $ = (selector, root = document) => root.querySelector(selector);
+const state = {session: null, busy: false, offset: 0, total: 0, sources: new Map(), editing: null, status: null, token: sessionStorage.getItem('accessToken') || ''};
+const el = (tag, className, text) => { const n = document.createElement(tag); if (className) n.className = className; if (text !== undefined) n.textContent = text; return n; };
+let toastTimer;
+function toast(text) { $('#toast').textContent = text; $('#toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $('#toast').hidden = true, 5000); }
+async function api(path, options = {}) {
+  const response = await fetch(path, {...options, headers: {'Content-Type': 'application/json', ...(state.token ? {Authorization: 'Bearer ' + state.token} : {}), ...options.headers}});
+  if (!response.ok) { let detail; try { detail = (await response.json()).detail; } catch {} if (response.status === 401) $('#auth-dialog').showModal(); throw new Error(typeof detail === 'string' ? detail : '请求失败，请重试'); }
+  return response;
+}
+async function json(path, options) { return (await api(path, options)).json(); }
+function view(name) {
+  $('#chat-view').hidden = name !== 'chat'; $('#library-view').hidden = name !== 'library';
+  $('#nav-chat').classList.toggle('active', name === 'chat'); $('#nav-library').classList.toggle('active', name === 'library');
+  $('#page-label').replaceChildren(document.createTextNode(name === 'chat' ? '知识问答 ' : '我的知识库 '), el('span', '', name === 'chat' ? '/ 有来源的回答' : '/ 持续积累与修订'));
+  if (name === 'library') loadLibrary().catch(e => toast(e.message));
+}
+async function refreshStatus() {
+  const status = await json('/api/status'); state.status = status;
+  $('#stat-count').textContent = status.knowledge.count; $('#nav-count').textContent = status.knowledge.count;
+  $('#stat-weeks').textContent = status.knowledge.dates.filter(x => x.date >= '2026-07-12' && x.date <= '2026-11-01').length;
+  const select = $('#category'), value = select.value;
+  select.replaceChildren(new Option('全部类别', ''));
+  status.knowledge.categories.forEach(c => select.add(new Option(c.category + ' · ' + c.count, c.category)));
+  select.value = value;
+  if (!status.configured) toast('请在服务端配置 DeepSeek 密钥后使用问答；知识库可正常浏览和编辑。');
+}
+async function sessions() {
+  const list = await json('/api/sessions'); $('#session-list').replaceChildren(); $('#mobile-session-list').replaceChildren();
+  if (!list.length) $('#session-list').append(el('p', 'session', '好问题，会留在这里。'));
+  list.forEach(s => {for (const target of ['#session-list','#mobile-session-list']) {const b = el('button', 'session' + (s.id === state.session ? ' selected' : ''), s.title); b.title = s.title; b.onclick = () => {$('#history-dialog').close(); openSession(s.id).catch(e => toast(e.message));}; $(target).append(b);}});
+}
+async function openSession(id) {
+  if (state.busy) return toast('请等待当前回答完成');
+  const messages = await json('/api/sessions/' + id + '/messages');
+  state.session = id; localStorage.setItem('lastSession', id); state.sources.clear(); $('#conversation').replaceChildren();
+  $('#welcome').hidden = messages.length > 0;
+  messages.forEach(m => renderMessage(m.role, m.content, m.refs, m.steps)); view('chat'); await sessions();
+}
+async function newChat() {
+  if (state.busy) return toast('请等待当前回答完成');
+  state.session = null; localStorage.removeItem('lastSession'); state.sources.clear(); $('#conversation').replaceChildren(); $('#welcome').hidden = false; view('chat'); await sessions(); $('#question').focus();
+}
+// Render text and citation controls with DOM APIs; never interpret model or imported HTML.
+function inline(parent, text) {
+  const parts = text.split(/(\[(?:K\d{4}|U[a-f0-9]{12})\]|\*\*[^*]+\*\*)/g);
+  parts.forEach(part => { if (/^\[(K\d{4}|U[a-f0-9]{12})\]$/.test(part)) {const id = part.slice(1,-1), b = el('button','citation',id); b.onclick = () => detail(id); parent.append(b);} else if (part.startsWith('**') && part.endsWith('**')) parent.append(el('strong','',part.slice(2,-2))); else parent.append(document.createTextNode(part)); });
+}
+function answerText(content) {
+  const wrap = el('div', 'message-text');
+  const lines = content.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]; if (!line.trim()) continue;
+    if (line.trim().startsWith('|') && /^\s*\|?[\s:|\-]+\|\s*$/.test(lines[i+1] || '')) {
+      const scroll = el('div','table-scroll'), table = el('table');
+      const cells = text => text.trim().replace(/^\|/,'').replace(/\|$/,'').split('|');
+      const head = el('tr'); cells(line).forEach(c => {const th = el('th'); inline(th,c.trim()); head.append(th);}); table.append(head); i += 2;
+      while (i < lines.length && lines[i].trim().startsWith('|')) {const row = el('tr'); cells(lines[i]).forEach(c => {const td = el('td'); inline(td,c.trim()); row.append(td);}); table.append(row); i++;}
+      i--; scroll.append(table); wrap.append(scroll); continue;
+    }
+    const heading = /^(#{1,4})\s+(.+)$/.exec(line); const node = el(heading ? 'h3' : 'p'); inline(node, heading ? heading[2] : line); wrap.append(node);
+  }
+  return wrap;
+}
+function renderMessage(role, content, refs = [], steps = []) {
+  const wrap = el('article', 'message ' + role); const sources = refs || [];
+  sources.forEach(r => state.sources.set(r.id, r));
+  if (role === 'user') wrap.append(el('div','message-text',content));
+  else {
+    const heading = el('div','message-heading'); heading.append(el('span','avatar','小'), document.createTextNode('小小信息 · 知识库助手')); wrap.append(heading, answerText(content));
+    if (sources.length) {wrap.append(el('p','sources-title','本次参考资料 · 点击查看用途和原始链接')); const cards = el('div','sources'); sources.forEach(r => {const b = el('button','source-card'); b.append(el('strong','',r.id + ' · ' + r.name),el('span','',r.date + ' / ' + r.category + ' / v' + r.version)); b.onclick = () => detail(r.id); cards.append(b);}); wrap.append(cards);}
+    if (steps.length) {const d = el('details','trace'); d.append(el('summary','','查看检索过程 · ' + steps.length + ' 步')); steps.forEach(s => d.append(el('p','',s.label))); wrap.append(d);}
+    const copy = el('button','copy-answer','复制回答'); copy.onclick = async () => {try {await navigator.clipboard.writeText(content); toast('已复制回答');} catch {toast('浏览器未允许复制，请手动选择文字。');}}; wrap.append(copy);
+  }
+  $('#conversation').append(wrap); return wrap;
+}
+async function ask(question) {
+  question = question.trim(); if (!question || state.busy) return;
+  if (question.length > 5000) return toast('问题最多 5000 字，请缩短后重试');
+  state.busy = true; $('#send').disabled = true; $('#question').disabled = true; $('#welcome').hidden = true;
+  let userNode;
+  try {
+    if (!state.session) {const s = await json('/api/sessions',{method:'POST'}); state.session = s.id; localStorage.setItem('lastSession',s.id);}
+    userNode = renderMessage('user',question); $('#question').value = ''; $('#run-status').textContent = '正在连接知识库…';
+    const response = await api('/api/chat',{method:'POST',body:JSON.stringify({session_id:state.session,question})});
+    const reader = response.body.getReader(), decoder = new TextDecoder(); let buffer = '', completed = false;
+    while (true) {const {done,value} = await reader.read(); buffer += done ? decoder.decode() : decoder.decode(value,{stream:true});
+      let lineEnd; while ((lineEnd = buffer.indexOf('\n')) !== -1) {const line = buffer.slice(0,lineEnd); buffer = buffer.slice(lineEnd+1); if (!line.trim()) continue; const event = JSON.parse(line);
+        if (event.type === 'start' || event.type === 'step') $('#run-status').textContent = event.label;
+        if (event.type === 'error') throw new Error(event.message);
+        if (event.type === 'done') {renderMessage('assistant', event.answer,event.sources,event.steps).scrollIntoView({block:'start',behavior:'smooth'}); completed = true;}
+      }
+      if (done) break;
+    }
+    if (!completed) throw new Error('连接中断，请重试。');
+    await sessions();
+  } catch (e) {if (userNode) userNode.remove(); $('#question').value = question; toast(e.message); if (!$('#conversation').children.length) $('#welcome').hidden = false;}
+  finally {state.busy = false; $('#send').disabled = false; $('#question').disabled = false; $('#run-status').textContent = ''; $('#question').focus();}
+}
+function queryParams() {return new URLSearchParams({q:$('#search').value,start_date:$('#start-date').value,end_date:$('#end-date').value,category:$('#category').value,limit:20,offset:state.offset});}
+let libraryRequest = 0;
+async function loadLibrary() {
+  const request = ++libraryRequest; const result = await json('/api/knowledge?' + queryParams()); if (request !== libraryRequest) return;
+  state.total = result.total; $('#results-count').textContent = '共 ' + result.total + ' 条资料'; $('#knowledge-list').replaceChildren();
+  if (!result.items.length) $('#knowledge-list').append(el('p','empty-state','没有找到相关资料。试试其他关键词，或补充一条新资料。'));
+  result.items.forEach(item => {const card = el('button','knowledge-card'); const meta = el('div','card-meta'); meta.append(el('span','category-tag',item.category),el('span','',item.date)); const footer = el('div','card-footer'); footer.append(el('span','',item.organization || '查看来源与核对情况'),el('span','','查看资料 ↗')); card.append(meta,el('h2','',item.name),el('p','',item.function),footer); card.onclick = () => detail(item.id); $('#knowledge-list').append(card);});
+  $('#page-number').textContent = (Math.floor(state.offset/20)+1) + ' / ' + Math.max(1,Math.ceil(state.total/20)); $('#previous').disabled = state.offset === 0; $('#next').disabled = state.offset + 20 >= state.total;
+}
+function block(root, title, text) {if (!text) return; const section = el('section','detail-block'); section.append(el('h3','',title),el('p','',text)); root.append(section);}
+async function detail(id) {
+  try {const item = await json('/api/knowledge/' + id); state.sources.set(id,item); const root = el('div','detail-content');
+    root.append(el('div','detail-meta',item.date + ' / ' + item.category + ' / ' + item.id + ' / 版本 ' + item.version),el('h2','',item.name));
+    if (item.organization) root.append(el('p','detail-meta',item.organization));
+    block(root,'具体用途',item.function); block(root,'适用场景（示例）',item.scenario); block(root,'使用方式',item.workflow); block(root,'限制与注意',item.limitations);
+    block(root,'作者当期摘要（请结合核对说明）',item.reported_claim); block(root,'当期状态',item.status);
+    root.append(el('p','detail-notice',item.verification || '尚未独立核实'));
+    const urls = [...(item.links||[]),...(item.additional_links||[])]; if (item.video) urls.push(item.video); if (item.comment) urls.push(item.comment);
+    if (urls.length) {const section = el('section','detail-block'); section.append(el('h3','','原始链接与补充来源')); const links = el('div','detail-links'); [...new Set(urls)].forEach(url => {try {const u = new URL(url); if (!['http:','https:'].includes(u.protocol)) return; const a = el('a','',url); a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; links.append(a);} catch {}}); section.append(links); root.append(section);}
+    block(root,'补充说明',item.notes); const actions = el('div','detail-actions'), edit = el('button','primary','编辑这条资料'), history = el('button','outline','查看修订记录'); edit.onclick = () => {$('#detail-dialog').close(); openEditor(item);}; history.onclick = async () => {try {const rows = await json('/api/knowledge/' + id + '/revisions'); history.disabled = true; const section = el('section','detail-block'); section.append(el('h3','','修订记录')); rows.forEach(r => {const d = el('details','revision'); d.append(el('summary','','v' + r.version + ' · ' + r.created_at.slice(0,10) + ' · ' + r.reason),el('pre','',JSON.stringify(r.body,null,2))); section.append(d);}); root.append(section);} catch(e) {toast(e.message);}}; actions.append(edit,history); root.append(actions);
+    $('#detail-body').replaceChildren(root); if (!$('#detail-dialog').open) $('#detail-dialog').showModal(); $('#detail-dialog').scrollTop = 0;
+  } catch(e) {toast(e.message);}
+}
+function openEditor(item = null) {
+  state.editing = item; const f = $('#entry-form'); f.reset(); $('#save-error').textContent = ''; $('#edit-title').textContent = item ? '修订资料 · ' + item.name : '补充资料'; $('#reason-label').hidden = !item;
+  for (const input of f.elements) {if (!input.name) continue; let value = item?.[input.name] ?? ''; if (Array.isArray(value)) value = value.join('\n'); input.value = value;}
+  if (!item) {f.elements.date.value = new Date().toLocaleDateString('en-CA'); f.elements.verification.value = '用户补充，尚未独立核实';}
+  $('#edit-dialog').showModal();
+}
+async function saveEntry(event) {
+  event.preventDefault(); const f = $('#entry-form'); const raw = Object.fromEntries(new FormData(f)); raw.links = raw.links.split(/\s+/).filter(Boolean);
+  if (state.editing) {Object.assign(raw,{version:Number(raw.version)}); for (const k of ['type','status','reported_claim','additional_links','video','comment']) raw[k] = state.editing[k];}
+  else {delete raw.id; delete raw.version;}
+  $('#save-entry').disabled = true; $('#save-error').textContent = '';
+  try {const item = await json('/api/knowledge' + (state.editing ? '/' + state.editing.id : ''), {method:state.editing?'PUT':'POST',body:JSON.stringify(raw)}); $('#edit-dialog').close(); toast('已保存，后续提问将检索新版本'); await refreshStatus(); if (!$('#library-view').hidden) await loadLibrary(); await detail(item.id);}
+  catch(e) {$('#save-error').textContent = e.message;} finally {$('#save-entry').disabled = false;}
+}
+$('#nav-chat').onclick = () => view('chat'); $('#nav-library').onclick = () => view('library'); $('#new-chat').onclick = () => newChat().catch(e => toast(e.message));
+$('#mobile-history').onclick = async () => {try {await sessions(); $('#history-dialog').showModal();} catch(e) {toast(e.message);}};
+$('#mobile-new-chat').onclick = () => {$('#history-dialog').close(); newChat().catch(e => toast(e.message));};
+$('#add-top').onclick = () => openEditor(); $('#entry-form').onsubmit = saveEntry;
+document.querySelectorAll('.close-dialog').forEach(b => b.onclick = () => b.closest('dialog').close());
+document.querySelectorAll('dialog').forEach(d => d.addEventListener('click',e => {if (e.target === d) {const r = d.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) d.close();}}));
+$('#chat-form').onsubmit = e => {e.preventDefault(); ask($('#question').value);}; $('#question').onkeydown = e => {if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {e.preventDefault(); ask($('#question').value);}};
+document.querySelectorAll('[data-prompt]').forEach(b => b.onclick = () => ask(b.dataset.prompt));
+$('#filters').onsubmit = e => {e.preventDefault(); state.offset = 0; loadLibrary().catch(e => toast(e.message));};
+$('#reset-filters').onclick = () => {$('#filters').reset(); state.offset = 0; loadLibrary().catch(e => toast(e.message));};
+$('#previous').onclick = () => {state.offset = Math.max(0,state.offset-20); loadLibrary().catch(e => toast(e.message));}; $('#next').onclick = () => {state.offset += 20; loadLibrary().catch(e => toast(e.message));};
+$('#import-button').onclick = () => $('#import-file').click(); $('#import-file').onchange = async e => {const file = e.target.files[0]; if (!file) return; try {if (file.size > 2_000_000) throw new Error('单次最多 2MB，请拆分文件。'); const result = await json('/api/import',{method:'POST',body:JSON.stringify({filename:file.name,content:await file.text()})}); toast('导入完成：新增 ' + result.added + ' 条，跳过同日同名资料 ' + result.skipped + ' 条'); await refreshStatus(); state.offset = 0; await loadLibrary();} catch(error) {toast(error.message);} finally {e.target.value = '';}};
+$('#export-button').onclick = async () => {try {const blob = await (await api('/api/export')).blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '小小信息_知识库备份.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href),1000); toast('已导出当前全部资料；对话和修订历史请备份 runtime 文件夹。');} catch(e) {toast(e.message);}};
+$('#auth-form').onsubmit = async e => {e.preventDefault(); state.token = $('#access-token').value; sessionStorage.setItem('accessToken',state.token); $('#auth-dialog').close(); await init();};
+async function init() {try {await refreshStatus(); const previous = localStorage.getItem('lastSession'); if (previous) {try {await openSession(previous);} catch {localStorage.removeItem('lastSession'); await sessions();}} else await sessions();} catch(e) {toast(e.message);}}
+init();
