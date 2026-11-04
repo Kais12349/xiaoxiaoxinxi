@@ -195,7 +195,15 @@ async function ask(question) {
   const controller = state.controller, baseline = state.messageCount, started = Date.now();
   const userNode = renderMessage('user',question), pending = el('article','message assistant pending');
   pending.setAttribute('aria-live','off');
-  const phase = el('p','pending-phase','正在连接知识库…'), elapsed = el('span','elapsed',''); pending.append(phase,elapsed); $('#conversation').append(pending);
+  const phase = el('p','pending-phase','正在连接知识库…'), elapsed = el('span','elapsed','');
+  const preview = el('div', 'message-text streaming-text');
+  const liveText = document.createTextNode('');
+  preview.append(liveText);
+  preview.hidden = true;
+  pending.append(phase, preview, elapsed);
+  $('#conversation').append(pending);
+  const nearBottom = () => document.documentElement.scrollHeight - window.scrollY - window.innerHeight < 160;
+  const followAnswer = () => window.scrollTo(0, document.documentElement.scrollHeight);
   $('#question').value = ''; $('#question').placeholder = '可以先写下一条问题，回答完成后发送…'; pending.scrollIntoView({block:'nearest',behavior:'smooth'});
   const updatePhase = label => {phase.textContent = label; $('#run-status').textContent = label;}; updatePhase('正在连接知识库…');
   const timer = setInterval(() => elapsed.textContent = '已等待 ' + Math.floor((Date.now()-started)/1000) + ' 秒 · 可随时停止',1000);
@@ -208,8 +216,27 @@ async function ask(question) {
     while (true) {const {done,value} = await reader.read(); buffer += done ? decoder.decode() : decoder.decode(value,{stream:true});
       let lineEnd; while ((lineEnd = buffer.indexOf('\n')) !== -1) {const line = buffer.slice(0,lineEnd); buffer = buffer.slice(lineEnd+1); if (!line.trim()) continue; const event = JSON.parse(line);
         if (['start','step','phase'].includes(event.type)) updatePhase(event.label);
+        if (event.type === 'delta') {
+          const follow = nearBottom();
+          if (preview.hidden) updatePhase('正在生成回答…');
+          liveText.appendData(event.text);
+          preview.hidden = false;
+          if (follow) followAnswer();
+        }
+        if (event.type === 'reset') {
+          liveText.data = '';
+          preview.hidden = true;
+        }
         if (event.type === 'error') throw new Error(event.message);
-        if (event.type === 'done' && !completed) {pending.remove(); renderMessage('assistant', event.answer,event.sources,event.steps).scrollIntoView({block:'start',behavior:'smooth'}); state.messageCount = baseline + 2; completed = true;}
+        if (event.type === 'done' && !completed) {
+          const follow = nearBottom();
+          pending.remove();
+          const reply = renderMessage('assistant', event.answer, event.sources, event.steps);
+          if (preview.hidden) reply.scrollIntoView({block:'start',behavior:'smooth'});
+          else if (follow) followAnswer();
+          state.messageCount = baseline + 2;
+          completed = true;
+        }
       }
       if (done) break;
     }
@@ -224,6 +251,7 @@ async function ask(question) {
       } else {
         const stopped = controller.signal.aborted; pending.classList.remove('pending'); pending.classList.add('failed'); pending.setAttribute('aria-live','polite');
         pending.replaceChildren(el('p','',stopped ? '已停止生成。可以重试，或修改问题后再发送。' : e instanceof TypeError ? '连接中断，请检查本机服务后重试。' : e.message));
+        if (!preview.hidden) pending.append(el('p', 'partial-notice', '以下内容尚未完成，未保存到历史。'), preview);
         const actions = el('div','retry-actions'), retry = el('button','outline','重试这个问题'), edit = el('button','text-button','放回输入框');
         retry.onclick = () => {if (state.busy || historyState.opening) return toast('请先完成当前操作'); if ($('#question').value.trim()) return toast('输入框里有草稿，请先发送或保存草稿再重试'); userNode.remove(); pending.remove(); ask(question);};
         edit.onclick = () => {if ($('#question').value.trim() && $('#question').value !== question) return toast('输入框里已有草稿，请先保存草稿'); $('#question').value = question; userNode.remove(); pending.remove(); if (!$('#conversation').children.length) $('#welcome').hidden = false; $('#question').focus();};

@@ -9,6 +9,14 @@ class ProviderError(Exception):
     pass
 
 
+CITATION = re.compile(r"\[(K\d{4}|U[a-f0-9]{12})\]")
+PARTIAL_CITATION = re.compile(r"\[[^\[\]\n]{0,13}\Z")
+
+
+def validate_citations(answer, refs):
+    return CITATION.sub(lambda m: m.group(0) if m.group(1) in refs else "（引用未找到）", answer)
+
+
 def function(name, description, properties, required):
     return {"type": "function", "function": {"name": name, "description": description,
         "parameters": {"type": "object", "properties": properties, "required": required, "additionalProperties": False}}}
@@ -24,6 +32,7 @@ TOOLS = [
 
 SYSTEM = """你是“小小信息”的中文知识库助手。只根据本地工具返回的资料回答，不能把模型记忆当成本项目证据。
 先检索；比较或追问时可换关键词再次检索或读取详情，工具总轮数有限，请集中完成。
+需要调用工具时只发工具调用，等资料齐备再输出正文。
 检索时分开项目名、用途和筛选条件，避免把安装、资料、工具等泛词堆在一次搜索中；比较时明确列出双方名称。
 回答具体说明：做什么、适合谁/什么场景、输入输出和局限，按问题决定篇幅。涉及多日期按时间排序。
 先直接回应用户要做的事，再给依据和下一步。用户限定推荐数量或步骤数量时严格遵守，不再另列一长串未推荐项目；简短追问只补充所问内容，不重复整篇介绍。要求详细时再完整展开。
@@ -48,24 +57,76 @@ class KnowledgeAgent:
     def __init__(self, store, key, base_url="https://api.deepseek.com", model="deepseek-flash"):
         self.store, self.key, self.base_url, self.model = store, key, base_url.rstrip("/"), model
 
-    async def _complete(self, messages, force_search=False, final=False):
+    async def _complete(self, messages, force_search=False, final=False, progress=None, refs=None):
         payload = {"model": self.model, "messages": messages, "max_tokens": 2600,
-                   "thinking": {"type": "disabled"}, "stream": False}
+                   "thinking": {"type": "disabled"}, "stream": not force_search}
         if not final:
             payload["tools"] = TOOLS
             payload["tool_choice"] = {"type": "function", "function": {"name": "search_knowledge"}} if force_search else "auto"
         try:
             async with httpx.AsyncClient(timeout=httpx.Timeout(100, connect=20)) as client:
-                response = await client.post(self.base_url + "/chat/completions", json=payload,
-                    headers={"Authorization": "Bearer " + self.key})
-            if response.status_code != 200:
-                status = response.status_code
-                message = {401: "DeepSeek 密钥无效，请检查本机配置。", 402: "DeepSeek 余额不足，请补充余额后重试。",
-                           429: "DeepSeek 请求过于频繁，请稍后重试。"}.get(status, f"模型服务暂时不可用（HTTP {status}），请重试。")
-                raise ProviderError(message)
-            return response.json()["choices"][0]["message"]
-        except (httpx.HTTPError, KeyError, IndexError, ValueError) as exc:
+                async with client.stream("POST", self.base_url + "/chat/completions", json=payload,
+                                         headers={"Authorization": "Bearer " + self.key}) as response:
+                    if response.status_code != 200:
+                        status = response.status_code
+                        message = {401: "DeepSeek 密钥无效，请检查本机配置。", 402: "DeepSeek 余额不足，请补充余额后重试。",
+                                   429: "DeepSeek 请求过于频繁，请稍后重试。"}.get(status, f"模型服务暂时不可用（HTTP {status}），请重试。")
+                        raise ProviderError(message)
+                    if payload["stream"]:
+                        return await self._read_completion(response, progress, refs or {})
+                    await response.aread()
+                    return response.json()["choices"][0]["message"]
+        except (httpx.HTTPError, KeyError, IndexError, ValueError, TypeError, AttributeError) as exc:
             raise ProviderError("连接模型服务失败或响应不完整，请稍后重试。") from exc
+
+    async def _read_completion(self, response, progress, refs):
+        content, calls = [], {}
+        pending, emitted, finish_reason = "", False, None
+        async for line in response.aiter_lines():
+            if not line.startswith("data:"):
+                continue
+            data = line[5:].strip()
+            if data == "[DONE]":
+                if finish_reason == "length":
+                    raise ProviderError("回答达到长度上限，请缩小问题范围后重试。")
+                if finish_reason != ("tool_calls" if calls else "stop"):
+                    break
+                if progress and pending and not calls:
+                    await progress({"type": "delta", "text": validate_citations(pending, refs)})
+                return {"content": "".join(content), "tool_calls": [calls[index] for index in sorted(calls)]}
+            chunk = json.loads(data)
+            if chunk.get("error"):
+                break
+            choices = chunk.get("choices") or []
+            if not choices:
+                continue
+            choice = choices[0]
+            finish_reason = choice.get("finish_reason") or finish_reason
+            delta = choice.get("delta") or {}
+            for part in delta.get("tool_calls") or []:
+                call = calls.setdefault(part["index"], {
+                    "id": "", "type": "function", "function": {"name": "", "arguments": ""},
+                })
+                call["id"] += part.get("id") or ""
+                function_delta = part.get("function") or {}
+                for field in ("name", "arguments"):
+                    call["function"][field] += function_delta.get(field) or ""
+            if calls and emitted:
+                await progress({"type": "reset"})
+                emitted = False
+            text = delta.get("content")
+            if text:
+                content.append(text)
+            if text and progress and not calls:
+                pending += text
+                # Keep a possible citation together when the provider splits its ID across chunks.
+                tail = PARTIAL_CITATION.search(pending)
+                end = tail.start() if tail else len(pending)
+                if end:
+                    await progress({"type": "delta", "text": validate_citations(pending[:end], refs)})
+                    emitted = True
+                pending = pending[end:]
+        raise ProviderError("模型回答中断或响应不完整，请稍后重试。")
 
     async def answer(self, question, history, progress=None):
         if not self.key:
@@ -90,14 +151,13 @@ class KnowledgeAgent:
         for turn in range(5):
             if progress and turn:
                 await progress({"type": "phase", "label": "正在核对资料并整理回答…"})
-            msg = await self._complete(messages, force_search=turn == 0, final=turn == 4)
+            msg = await self._complete(messages, force_search=turn == 0, final=turn == 4, progress=progress, refs=refs)
             calls = msg.get("tool_calls") or []
             if not calls:
                 answer = msg.get("content") or "资料不足，暂时无法回答，请补充相关来源。"
                 # Drop unknown citation markers rather than rendering invented sources.
-                answer = re.sub(r"\[((?:K\d{4}|U[a-f0-9]{12}))\]",
-                                lambda m: m.group(0) if m.group(1) in refs else "（引用未找到）", answer)
-                ids = list(dict.fromkeys(re.findall(r"\[((?:K\d{4}|U[a-f0-9]{12}))\]", answer)))
+                answer = validate_citations(answer, refs)
+                ids = list(dict.fromkeys(CITATION.findall(answer)))
                 cited = [refs[key] for key in ids if key in refs]
                 return {"answer": answer, "sources": cited, "steps": steps, "model": self.model}
             messages.append({"role": "assistant", "content": msg.get("content") or "", "tool_calls": calls})

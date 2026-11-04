@@ -9,6 +9,7 @@ from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
 
+import httpx
 from fastapi.testclient import TestClient
 
 from agent import KnowledgeAgent, ProviderError
@@ -261,6 +262,80 @@ class ApiTests(unittest.TestCase):
 
 
 class AgentTests(unittest.IsolatedAsyncioTestCase):
+    async def test_streams_text_and_resolves_tool_calls_and_split_citations(self):
+        with tempfile.TemporaryDirectory() as folder:
+            store = Knowledge(Path(folder)/'stream.sqlite3', ROOT/'data/knowledge.json')
+            entry = store.search('Code2Video')['items'][0]
+            tool = {'id': 'search_1', 'type': 'function', 'function': {
+                'name': 'search_knowledge', 'arguments': '{"query":"Code2Video"}',
+            }}
+            events = []
+            requests = []
+
+            def event(delta, finish_reason=None):
+                return ('data: ' + json.dumps({'choices': [{'delta': delta, 'finish_reason': finish_reason}]})
+                        + '\n\n').encode()
+
+            class Completion(httpx.AsyncByteStream):
+                def __init__(self, chunks, after_first=None):
+                    self.chunks, self.after_first = chunks, after_first
+
+                async def __aiter__(self):
+                    for index, chunk in enumerate(self.chunks):
+                        yield chunk
+                        if index == 0 and self.after_first:
+                            self.after_first()
+
+            def provider(request):
+                payload = json.loads(request.content)
+                requests.append(payload)
+                if len(requests) == 1:
+                    self.assertFalse(payload['stream'])
+                    return httpx.Response(200, json={'choices': [{'message': {'tool_calls': [tool]}}]})
+                self.assertTrue(payload['stream'])
+                if len(requests) == 2:
+                    chunks = [
+                        event({'content': '我再确认一下'}),
+                        event({'tool_calls': [{'index': 0, 'id': 'detail_1', 'function': {
+                            'name': 'get_entry', 'arguments': '{"id":'}}]}),
+                        event({'tool_calls': [{'index': 0, 'function': {
+                            'arguments': json.dumps(entry['id']) + '}'}}]}, 'tool_calls'),
+                    ]
+                    after_first = None
+                else:
+                    self.assertEqual(json.loads(payload['messages'][-1]['content'])['id'], entry['id'])
+                    chunks = [event({'content': '具体用途 [' + entry['id'][:2]}),
+                              event({'content': entry['id'][2:] + ']，未知 [K99'}),
+                              event({'content': '99]'}, 'stop')]
+                    after_first = lambda: self.assertEqual(events[-1], {'type': 'delta', 'text': '具体用途 '})
+                return httpx.Response(200, stream=Completion([*chunks, b'data: [DONE]\n\n'], after_first))
+
+            async def progress(item):
+                events.append(item)
+
+            client = httpx.AsyncClient
+            with patch('agent.httpx.AsyncClient', side_effect=lambda **kwargs:
+                       client(transport=httpx.MockTransport(provider), **kwargs)):
+                result = await KnowledgeAgent(store, 'fixture').answer('Code2Video', [], progress)
+            reset = events.index({'type': 'reset'})
+            deltas = ''.join(item['text'] for item in events[reset+1:] if item['type'] == 'delta')
+            self.assertEqual(deltas, result['answer'])
+            self.assertEqual(result['answer'], f"具体用途 [{entry['id']}]，未知 （引用未找到）")
+            self.assertEqual([item['id'] for item in result['sources']], [entry['id']])
+            self.assertEqual([step['tool'] for step in result['steps']], ['search_knowledge', 'get_entry'])
+
+    async def test_truncated_stream_is_an_error(self):
+        agent = KnowledgeAgent(None, 'fixture')
+        response = httpx.Response(200, content='data: {"choices":[{"delta":{"content":"部分回答"}}]}\n\n')
+        events = []
+
+        async def progress(item):
+            events.append(item)
+
+        with self.assertRaisesRegex(ProviderError, '响应不完整'):
+            await agent._read_completion(response, progress, {})
+        self.assertEqual(events, [{'type': 'delta', 'text': '部分回答'}])
+
     async def test_unknown_followup_does_not_reuse_previous_sources(self):
         with tempfile.TemporaryDirectory() as folder:
             store = Knowledge(Path(folder)/'unknown.sqlite3',ROOT/'data/knowledge.json')
