@@ -8,4 +8,59 @@
 .message-text{font-size:15px;line-height:1.9}.message-text h3{font-size:17px}.message-text ul,.message-text ol{padding-left:24px;margin:10px 0}.message-text li{margin:7px 0}.message-text code{background:#edf1e7;padding:2px 5px;border-radius:4px;font-size:.9em}.message-text pre{overflow-x:auto;background:#edf1e7;padding:15px;border-radius:8px;white-space:pre}.message-text pre code{padding:0}.message-text hr{border:0;border-top:1px solid var(--line);margin:23px 0}.message-text table{font-size:13px}.composer textarea{font-size:15px}.send{width:44px;height:44px}.send[aria-label="停止生成"]{font-size:17px;background:#6c7964}.pending,.failed{background:#f0f3e9;border:1px solid var(--line);border-radius:12px;padding:17px;font-size:14px}.pending-phase{margin:0 0 8px;color:var(--green)}.elapsed{font-size:12px;color:#6a7960}.failed{background:#faf2e7;color:#86582e}.retry-actions{display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap}.sources-more,.copy-answer{font-size:12px;min-height:40px}.sources-more{color:var(--green);margin-top:5px}.citation{font-size:12px;line-height:1.6;padding:2px 6px;max-width:100%;overflow-wrap:anywhere}.source-card strong{font-size:13px;overflow-wrap:anywhere}.source-card span{font-size:11px}.sources-title,.trace{font-size:12px}.source-card{min-height:64px}.detail-actions{flex-wrap:wrap}.detail-block p{font-size:14px}.detail-block h3,.detail-links,.detail-meta{font-size:12px}.detail-links a{padding:5px 0}.close-dialog{min-width:44px;min-height:44px}.outline,.primary{min-height:40px}.run-status{font-size:12px}.footnote{font-size:10px;color:#77836e}
 @media(max-width:760px){.message-text{font-size:15px}.composer textarea{font-size:16px}.sources{grid-template-columns:1fr}.chat-view{padding:0 16px}.nav{min-height:44px}.source-card{padding:12px}.header-actions button{min-height:40px}.detail-actions button{flex:1 1 auto}.detail-content{padding:18px}.knowledge-card p{font-size:13px}.knowledge-card h2{font-size:18px}.filters input,.filters select,#entry-form input,#entry-form textarea{font-size:16px}.filters input[type=date]{font-size:13px;min-width:0}.composer-bottom>span{max-width:calc(100% - 50px)}header{padding:12px 16px}.brand{font-size:16px}.nav{padding:7px}.sidebar{padding:10px 12px;gap:6px}}
 @media(max-width:360px){.brand-icon{display:none}.nav{font-size:10px;padding:7px 5px}.sidebar{gap:4px}.stat-strip>div{padding-right:15px;margin-right:15px}header p span{display:none}}
+
+.history-search {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+.session-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 3px 4px;
+}
+.session-row .session {
+  min-width: 0;
+  min-height: 36px;
+  flex: 1;
+  color: #475b4e;
+}
+.session-delete {
+  flex: none;
+  min-width: 44px;
+  min-height: 36px;
+  padding: 0 7px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #775048;
+}
+.session-delete:hover {background: #f5e4df; color: #942f27;}
+.history-empty, .history-status {
+  padding: 8px 10px;
+  font-size: 13px;
+  color: #536557;
+}
+.history-status:empty, #delete-error:empty {display: none;}
+#delete-dialog {width: min(400px, calc(100vw - 32px));}
+.delete-body {padding: 22px; overflow-wrap: anywhere;}
+.delete-body h2 {font-size: 19px;}
+#delete-name {margin: 10px 0 5px; font-weight: 600;}
+#delete-description {color: #536557;}
+#delete-error {font-size: 13px; color: #942f27;}
+.delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+.delete-actions button {min-height: 44px; padding: 8px 14px; font-size: 13px;}
+.danger {background: #a2332c; color: #fff; border-radius: 8px; font-weight: 600;}
+.danger:hover {background: #842922;}
+@media(max-width:760px) {
+  #history-search {display: none;}
+  .history-search {font-size: 16px;}
+  .session-row .session, .session-delete {min-height: 44px; font-size: 14px;}
+}
 .header-actions{display:flex;gap:8px}#mobile-history{display:none}.mobile-history-body{padding:22px}.mobile-history-body>.primary{width:100%;margin-bottom:15px}.table-scroll{overflow-x:auto;margin:15px 0}.message-text table{border-collapse:collapse;font-size:13px;min-width:520px}.message-text th,.message-text td{border:1px solid var(--line);padding:9px;text-align:left;vertical-align:top}.message-text th{background:#edf2e6;font-weight:600}@media(max-width:760px){#mobile-history{display:block}.mobile-history-body .session{display:block}header{gap:8px}.header-actions{gap:5px}.header-actions button{font-size:10px;padding:7px 8px}}

@@ -1,6 +1,7 @@
 'use strict';
 const $ = (selector, root = document) => root.querySelector(selector);
 const state = {session: null, busy: false, controller: null, messageCount: 0, offset: 0, total: 0, sources: new Map(), editing: null, status: null, token: sessionStorage.getItem('accessToken') || ''};
+const historyState = {items: [], query: '', request: 0, opening: false, deleting: null, pending: false};
 const el = (tag, className, text) => { const n = document.createElement(tag); if (className) n.className = className; if (text !== undefined) n.textContent = text; return n; };
 let toastTimer;
 function toast(text) { $('#toast').textContent = text; $('#toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $('#toast').hidden = true, 5000); }
@@ -29,20 +30,118 @@ async function refreshStatus() {
   if (!status.configured) toast('请在服务端配置 DeepSeek 密钥后使用问答；知识库可正常浏览和编辑。');
 }
 async function sessions() {
-  const list = await json('/api/sessions'); $('#session-list').replaceChildren(); $('#mobile-session-list').replaceChildren();
-  if (!list.length) $('#session-list').append(el('p', 'session', '好问题，会留在这里。'));
-  list.forEach(s => {for (const target of ['#session-list','#mobile-session-list']) {const b = el('button', 'session' + (s.id === state.session ? ' selected' : ''), s.title); b.title = s.title; b.onclick = () => {$('#history-dialog').close(); openSession(s.id).catch(e => toast(e.message));}; $(target).append(b);}});
+  const request = ++historyState.request;
+  const items = await json('/api/sessions');
+  if (request !== historyState.request) return;
+  historyState.items = items;
+  renderSessions();
+}
+function renderSessions() {
+  const query = historyState.query.trim().toLowerCase();
+  const items = historyState.items.filter(session => session.title.toLowerCase().includes(query));
+  for (const selector of ['#session-list', '#mobile-session-list']) {
+    const list = $(selector);
+    list.replaceChildren();
+    if (!items.length) list.append(el('p', 'history-empty', query ? '没有找到匹配的对话。' : '暂无对话。发出第一个问题后，对话会出现在这里。'));
+    for (const session of items) {
+      const row = el('div', 'session-row');
+      const selected = session.id === state.session;
+      const open = el('button', 'session' + (selected ? ' selected' : ''), session.title);
+      open.title = session.title;
+      if (selected) open.setAttribute('aria-current', 'true');
+      open.onclick = () => {
+        $('#history-dialog').close();
+        openSession(session.id).catch(e => toast(e.message));
+      };
+      const remove = el('button', 'session-delete', '删除');
+      remove.setAttribute('aria-label', '删除对话 ' + session.title);
+      remove.onclick = () => requestDelete(session);
+      row.append(open, remove);
+      list.append(row);
+    }
+  }
+}
+function showSession(id, messages) {
+  state.session = id;
+  state.messageCount = messages.length;
+  if (id) localStorage.setItem('lastSession', id);
+  else localStorage.removeItem('lastSession');
+  state.sources.clear();
+  $('#conversation').replaceChildren();
+  $('#welcome').hidden = messages.length > 0;
+  messages.forEach(m => renderMessage(m.role, m.content, m.refs, m.steps));
+  view('chat');
+  renderSessions();
 }
 async function openSession(id) {
   if (state.busy) return toast('请等待当前回答完成');
-  const messages = await json('/api/sessions/' + id + '/messages');
-  state.session = id; state.messageCount = messages.length; localStorage.setItem('lastSession', id); state.sources.clear(); $('#conversation').replaceChildren();
-  $('#welcome').hidden = messages.length > 0;
-  messages.forEach(m => renderMessage(m.role, m.content, m.refs, m.steps)); view('chat'); await sessions();
+  if (historyState.opening) return;
+  historyState.opening = true;
+  try {
+    showSession(id, await json('/api/sessions/' + id + '/messages'));
+  } finally {
+    historyState.opening = false;
+  }
 }
-async function newChat() {
+function newChat() {
   if (state.busy) return toast('请等待当前回答完成');
-  state.session = null; state.messageCount = 0; localStorage.removeItem('lastSession'); state.sources.clear(); $('#conversation').replaceChildren(); $('#welcome').hidden = false; view('chat'); await sessions(); $('#question').focus({preventScroll:true});
+  if (historyState.opening) return toast('正在打开对话，请稍候');
+  showSession(null, []);
+  $('#question').focus({preventScroll: true});
+}
+function requestDelete(session) {
+  historyState.deleting = session;
+  $('#delete-name').textContent = session.title;
+  $('#delete-error').textContent = '';
+  $('#delete-dialog').showModal();
+}
+async function confirmDelete() {
+  if (historyState.pending) return;
+  if (historyState.opening) {
+    $('#delete-error').textContent = '正在打开对话，请稍候再试。';
+    return;
+  }
+  const {id} = historyState.deleting;
+  if (state.busy && state.session === id) {
+    $('#delete-error').textContent = '这段对话正在回答，请先停止生成或等回答完成后再删除。';
+    return;
+  }
+  const confirm = $('#confirm-delete'), cancel = $('#cancel-delete');
+  historyState.pending = confirm.disabled = cancel.disabled = true;
+  confirm.textContent = '正在删除…';
+  $('#delete-error').textContent = '';
+  try {
+    await api('/api/sessions/' + id, {method: 'DELETE'});
+    historyState.request++;
+    historyState.items = historyState.items.filter(session => session.id !== id);
+    const wasCurrent = state.session === id;
+    if (wasCurrent) showSession(null, []);
+    else renderSessions();
+
+    let notice = '已删除对话';
+    try {
+      await sessions();
+      if (wasCurrent && historyState.items.length) await openSession(historyState.items[0].id);
+    } catch {
+      notice = '已删除对话。其余对话暂未加载，请稍后重试。';
+    }
+    $('#delete-dialog').close();
+    if (wasCurrent) {
+      $('#history-dialog').close();
+      $('#question').focus({preventScroll: true});
+    } else {
+      const focusTarget = $('#history-dialog').open ? '#history-dialog .close-dialog' : '#history-search';
+      $(focusTarget).focus({preventScroll: true});
+    }
+    if ($('#history-dialog').open) $('#history-status').textContent = notice;
+    else toast(notice);
+  } catch (e) {
+    $('#delete-error').textContent = e.message;
+  } finally {
+    historyState.pending = confirm.disabled = cancel.disabled = false;
+    confirm.textContent = '确认删除';
+    if ($('#delete-dialog').open) confirm.focus();
+  }
 }
 // Render text and citation controls with DOM APIs; never interpret model or imported HTML.
 function inline(parent, text) {
@@ -90,6 +189,7 @@ function renderMessage(role, content, refs = [], steps = []) {
 }
 async function ask(question) {
   question = question.trim(); if (!question || state.busy) return;
+  if (historyState.opening || historyState.pending) return toast('正在处理对话，请稍候');
   if (question.length > 5000) return toast('问题最多 5000 字，请缩短后重试');
   state.busy = true; state.controller = new AbortController(); $('#send').textContent = '■'; $('#send').setAttribute('aria-label','停止生成'); $('#send').title = '停止生成'; $('#welcome').hidden = true;
   const controller = state.controller, baseline = state.messageCount, started = Date.now();
@@ -125,7 +225,7 @@ async function ask(question) {
         const stopped = controller.signal.aborted; pending.classList.remove('pending'); pending.classList.add('failed'); pending.setAttribute('aria-live','polite');
         pending.replaceChildren(el('p','',stopped ? '已停止生成。可以重试，或修改问题后再发送。' : e instanceof TypeError ? '连接中断，请检查本机服务后重试。' : e.message));
         const actions = el('div','retry-actions'), retry = el('button','outline','重试这个问题'), edit = el('button','text-button','放回输入框');
-        retry.onclick = () => {if (state.busy) return toast('请先完成或停止当前回答'); if ($('#question').value.trim()) return toast('输入框里有草稿，请先发送或保存草稿再重试'); userNode.remove(); pending.remove(); ask(question);};
+        retry.onclick = () => {if (state.busy || historyState.opening) return toast('请先完成当前操作'); if ($('#question').value.trim()) return toast('输入框里有草稿，请先发送或保存草稿再重试'); userNode.remove(); pending.remove(); ask(question);};
         edit.onclick = () => {if ($('#question').value.trim() && $('#question').value !== question) return toast('输入框里已有草稿，请先保存草稿'); $('#question').value = question; userNode.remove(); pending.remove(); if (!$('#conversation').children.length) $('#welcome').hidden = false; $('#question').focus();};
         actions.append(retry,edit); pending.append(actions);
       }
@@ -185,12 +285,21 @@ async function saveEntry(event) {
   try {const item = await json('/api/knowledge' + (state.editing ? '/' + state.editing.id : ''), {method:state.editing?'PUT':'POST',body:JSON.stringify(raw)}); $('#edit-dialog').close(); toast('已保存，后续提问将检索新版本'); await refreshStatus(); if (!$('#library-view').hidden) await loadLibrary(); await detail(item.id);}
   catch(e) {$('#save-error').textContent = e.message;} finally {$('#save-entry').disabled = false;}
 }
-$('#nav-chat').onclick = () => view('chat'); $('#nav-library').onclick = () => view('library'); $('#new-chat').onclick = () => newChat().catch(e => toast(e.message));
-$('#mobile-history').onclick = async () => {try {await sessions(); $('#history-dialog').showModal();} catch(e) {toast(e.message);}};
-$('#mobile-new-chat').onclick = () => {$('#history-dialog').close(); newChat().catch(e => toast(e.message));};
+$('#nav-chat').onclick = () => view('chat'); $('#nav-library').onclick = () => view('library'); $('#new-chat').onclick = newChat;
+$('#mobile-history').onclick = async () => {try {await sessions(); $('#history-status').textContent = ''; $('#history-dialog').showModal();} catch(e) {toast(e.message);}};
+$('#mobile-new-chat').onclick = () => {$('#history-dialog').close(); newChat();};
+const historySearches = document.querySelectorAll('[data-history-search]');
+historySearches.forEach(input => input.oninput = () => {
+  historyState.query = input.value;
+  historySearches.forEach(other => {if (other !== input) other.value = input.value;});
+  renderSessions();
+});
+$('#cancel-delete').onclick = () => $('#delete-dialog').close();
+$('#confirm-delete').onclick = confirmDelete;
+$('#delete-dialog').oncancel = e => {if (historyState.pending) e.preventDefault();};
 $('#add-top').onclick = () => openEditor(); $('#entry-form').onsubmit = saveEntry;
 document.querySelectorAll('.close-dialog').forEach(b => b.onclick = () => b.closest('dialog').close());
-document.querySelectorAll('dialog').forEach(d => d.addEventListener('click',e => {if (e.target === d) {const r = d.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) d.close();}}));
+document.querySelectorAll('dialog').forEach(d => d.addEventListener('click',e => {if (e.target === d && !(d.id === 'delete-dialog' && historyState.pending)) {const r = d.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) d.close();}}));
 $('#chat-form').onsubmit = e => {e.preventDefault(); if (state.busy) state.controller?.abort(); else ask($('#question').value);}; $('#question').onkeydown = e => {if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {e.preventDefault(); if (state.busy) toast('草稿已保留，回答完成后按 Enter 发送'); else ask($('#question').value);}};
 document.querySelectorAll('[data-prompt]').forEach(b => b.onclick = () => ask(b.dataset.prompt));
 $('#filters').onsubmit = e => {e.preventDefault(); state.offset = 0; loadLibrary().catch(e => toast(e.message));};
@@ -199,5 +308,5 @@ $('#previous').onclick = () => {state.offset = Math.max(0,state.offset-20); load
 $('#import-button').onclick = () => $('#import-file').click(); $('#import-file').onchange = async e => {const file = e.target.files[0]; if (!file) return; try {if (file.size > 2_000_000) throw new Error('单次最多 2MB，请拆分文件。'); const result = await json('/api/import',{method:'POST',body:JSON.stringify({filename:file.name,content:await file.text()})}); toast('导入完成：新增 ' + result.added + ' 条，跳过同日同名资料 ' + result.skipped + ' 条'); await refreshStatus(); state.offset = 0; await loadLibrary();} catch(error) {toast(error.message);} finally {e.target.value = '';}};
 $('#export-button').onclick = async () => {try {const blob = await (await api('/api/export')).blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '小小信息_知识库备份.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href),1000); toast('已导出当前全部资料；对话和修订历史请备份 runtime 文件夹。');} catch(e) {toast(e.message);}};
 $('#auth-form').onsubmit = async e => {e.preventDefault(); state.token = $('#access-token').value; sessionStorage.setItem('accessToken',state.token); $('#auth-dialog').close(); await init();};
-async function init() {try {await refreshStatus(); const previous = localStorage.getItem('lastSession'); if (previous) {try {await openSession(previous);} catch {localStorage.removeItem('lastSession'); await sessions();}} else await sessions();} catch(e) {toast(e.message);}}
+async function init() {try {await refreshStatus(); const previous = localStorage.getItem('lastSession'); if (previous) {try {await openSession(previous);} catch {localStorage.removeItem('lastSession');}} await sessions();} catch(e) {toast(e.message);}}
 init();

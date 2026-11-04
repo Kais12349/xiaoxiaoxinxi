@@ -235,6 +235,23 @@ class ApiTests(unittest.TestCase):
             self.assertEqual(len(client.get('/api/sessions/'+first+'/messages').json()),2)
             self.assertEqual(client.get('/api/sessions/'+second+'/messages').json(),[])
 
+    def test_delete_session_removes_only_its_messages(self):
+        store = self.app.state.store
+        first = store.new_session()['id']
+        second = store.new_session()['id']
+        store.append_turn(first, '第一个问题', '第一个回答', [], [])
+        store.append_turn(second, '第二个问题', '第二个回答', [], [])
+        path = '/api/sessions/' + first
+        self.assertEqual(self.client.delete(path, headers={'Origin': 'https://other.example'}).status_code, 403)
+        self.assertEqual(self.client.delete(path).status_code, 204)
+        self.assertEqual(self.client.delete(path).status_code, 204)
+        self.assertEqual(self.client.get(path + '/messages').status_code, 404)
+        self.assertEqual([session['id'] for session in self.client.get('/api/sessions').json()], [second])
+        self.assertEqual(len(store.messages(second)), 2)
+        with self.assertRaises(KeyError):
+            store.append_turn(first, '延迟提交的问题', '延迟提交的回答', [], [])
+        self.assertEqual(store.messages(first), [])
+
     def test_access_token(self):
         with patch.dict(os.environ,{'APP_ACCESS_TOKEN':'test-access'}):
             app = create_app(Path(self.tmp.name)/'locked.sqlite3',api_key='')

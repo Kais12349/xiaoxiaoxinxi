@@ -1,12 +1,14 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#163f37"><title>小小信息 · AI 知识库</title><link rel="icon" href="data:,"><link rel="stylesheet" href="/static/styles.css?v=20261103-ux1"><script src="/static/app.js?v=20261103-ux1" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#163f37"><title>小小信息 · AI 知识库</title><link rel="icon" href="data:,"><link rel="stylesheet" href="/static/styles.css?v=20261103-history"><script src="/static/app.js?v=20261103-history" defer></script></head>
 <body>
 <aside class="sidebar">
   <a class="brand" href="/" aria-label="小小信息首页"><span class="brand-icon">小</span><span>小小信息<small>把信息，慢慢变成知识</small></span></a>
   <button id="new-chat" class="primary new-chat">＋ 开始新对话</button>
   <nav aria-label="主导航"><button id="nav-chat" class="nav active">◈ <span>知识问答</span><span class="nav-arrow">↗</span></button><button id="nav-library" class="nav">▤ <span>浏览知识库</span><span id="nav-count" class="badge">—</span></button></nav>
-  <div class="history-label">最近的对话</div><div id="session-list" class="session-list"></div>
+  <div class="history-label">最近的对话</div>
+  <input id="history-search" class="history-search" type="search" data-history-search aria-label="按标题搜索对话" placeholder="搜索对话标题" autocomplete="off">
+  <div id="session-list" class="session-list"></div>
   <div class="sidebar-bottom"><span class="live-dot"></span> 本地知识，持续积累 <small>产品君周报 · GitHub 项目精选<br>精选核对：2026.11.03</small></div>
 </aside>
 <main>
@@ -28,6 +30,26 @@
 <dialog id="detail-dialog" class="detail-dialog"><div class="dialog-top"><span>知识条目</span><button class="close-dialog" aria-label="关闭详情">×</button></div><div id="detail-body"></div></dialog>
 <dialog id="edit-dialog"><div class="dialog-top"><span id="edit-title">补充资料</span><button class="close-dialog" aria-label="关闭编辑">×</button></div><form id="entry-form"><p class="form-intro">保存后即可用于提问。请写清用途、来源和核对情况。</p><input type="hidden" name="id"><input type="hidden" name="version"><div class="form-row"><label>项目名称 *<input name="name" required maxlength="200"></label><label>记录日期 *<input name="date" type="date" required></label></div><div class="form-row"><label>类别<input name="category" placeholder="例如：视频、智能体、补充资料"></label><label>机构<input name="organization"></label></div><label>具体用途 *<textarea name="function" required rows="4" maxlength="30000" placeholder="它解决什么问题？输入什么、输出什么？"></textarea></label><label>适用场景<textarea name="scenario" rows="2"></textarea></label><label>使用方式<textarea name="workflow" rows="2"></textarea></label><label>限制与注意<textarea name="limitations" rows="2"></textarea></label><label>来源链接（每行一个）<textarea name="links" rows="2" placeholder="https://..."></textarea></label><label>核对情况<textarea name="verification" rows="2" placeholder="例如：已阅读官方文档；功能尚未实测"></textarea></label><label>补充说明<textarea name="notes" rows="2"></textarea></label><label id="reason-label" hidden>本次修改说明<input name="reason" placeholder="例如：补充官方链接、修正用途"></label><div id="save-error" class="form-error" role="alert"></div><div class="form-footer"><span>修改会保留版本记录</span><button id="save-entry" class="primary" type="submit">保存资料</button></div></form></dialog>
 <dialog id="auth-dialog"><div class="dialog-top">访问知识库</div><form id="auth-form"><label>访问口令<input id="access-token" type="password" required autocomplete="current-password"></label><button class="primary" type="submit">进入</button></form></dialog>
-<dialog id="history-dialog"><div class="dialog-top"><span>最近的对话</span><button class="close-dialog" aria-label="关闭对话列表">×</button></div><div class="mobile-history-body"><button id="mobile-new-chat" class="primary">＋ 开始新对话</button><div id="mobile-session-list"></div></div></dialog>
+<dialog id="history-dialog" aria-labelledby="history-title">
+  <div class="dialog-top"><span id="history-title">最近的对话</span><button class="close-dialog" aria-label="关闭对话列表">×</button></div>
+  <div class="mobile-history-body">
+    <button id="mobile-new-chat" class="primary">＋ 开始新对话</button>
+    <input id="mobile-history-search" class="history-search" type="search" data-history-search aria-label="按标题搜索对话" placeholder="搜索对话标题" autocomplete="off">
+    <p id="history-status" class="history-status" role="status"></p>
+    <div id="mobile-session-list"></div>
+  </div>
+</dialog>
+<dialog id="delete-dialog" aria-labelledby="delete-title" aria-describedby="delete-description">
+  <div class="delete-body">
+    <h2 id="delete-title">删除这段对话？</h2>
+    <p id="delete-name"></p>
+    <p id="delete-description">此对话中的全部消息都会被删除，删除后无法恢复。</p>
+    <p id="delete-error" class="form-error" role="alert"></p>
+    <div class="delete-actions">
+      <button id="cancel-delete" class="outline" autofocus>取消</button>
+      <button id="confirm-delete" class="danger">确认删除</button>
+    </div>
+  </div>
+</dialog>
 <div id="toast" class="toast" role="status" hidden></div>
 </body></html>

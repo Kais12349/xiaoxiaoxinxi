@@ -300,7 +300,12 @@ class Knowledge:
 
     def sessions(self):
         with self.connect() as db:
-            return [dict(r) for r in db.execute("SELECT * FROM sessions ORDER BY updated_at DESC LIMIT 100")]
+            return [dict(r) for r in db.execute("SELECT * FROM sessions ORDER BY updated_at DESC, rowid DESC LIMIT 100")]
+
+    def delete_session(self, session_id):
+        with self.connect() as db:
+            db.execute("DELETE FROM sessions WHERE id=?", (session_id,))
+            db.execute("DELETE FROM messages WHERE session_id=?", (session_id,))
 
     def messages(self, session_id):
         with self.connect() as db:
@@ -310,8 +315,10 @@ class Knowledge:
     def append_turn(self, session_id, question, answer, refs, steps):
         with self.connect() as db:
             stamp = now()
+            updated = db.execute("UPDATE sessions SET updated_at=? WHERE id=?", (stamp, session_id))
+            if not updated.rowcount:
+                raise KeyError(session_id)
             for role, content, sources, trace in [("user", question, [], []), ("assistant", answer, refs, steps)]:
                 db.execute("INSERT INTO messages VALUES (?,?,?,?,?,?,?)", (uuid.uuid4().hex, session_id, role,
                     content, json.dumps(sources, ensure_ascii=False), json.dumps(trace, ensure_ascii=False), stamp))
-            db.execute("UPDATE sessions SET updated_at=? WHERE id=?", (stamp, session_id))
             db.execute("UPDATE sessions SET title=? WHERE id=? AND title='新对话'", (question[:40], session_id))

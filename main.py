@@ -8,7 +8,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -123,6 +123,13 @@ def create_app(db_path=None, api_key=None, agent_override=None):
     @app.post("/api/sessions", status_code=201)
     def new_session():
         return store.new_session()
+
+    @app.delete("/api/sessions/{session_id}", status_code=204)
+    async def delete_session(session_id: str):
+        if session_id in active_sessions:
+            raise HTTPException(409, "这段对话正在回答，请先停止生成或等回答完成后再删除。")
+        store.delete_session(session_id)
+        return Response(status_code=204)
 
     def ensure_session(session_id):
         with store.connect() as db:
