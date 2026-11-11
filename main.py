@@ -195,7 +195,7 @@ def create_app(db_path=None, api_key=None, agent_override=None):
     def home():
         return FileResponse(ROOT / "web/index.html")
 
-    archives = {"timeline": "产品君_AI周报时间线.html", "markdown": "产品君_AI周报_2026-07-12至11-01.md", "csv": "信息清单.csv"}
+    archives = {"timeline": "产品君_AI周报时间线.html", "markdown": "产品君_AI周报_2026-07-12至11-08.md", "csv": "信息清单.csv"}
 
     @app.get("/archive/{name}")
     def archive(name: str):

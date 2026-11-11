@@ -18,7 +18,8 @@ from main import create_app
 
 ROOT = Path(__file__).resolve().parents[1]
 BATCH = ROOT / 'data/collections/github-2026-11-03.json'
-TOTAL = 382
+DOUYIN_BATCH = ROOT / 'data/collections/douyin-2026-11-08.json'
+TOTAL = 409
 
 
 class StoreTests(unittest.TestCase):
@@ -33,7 +34,7 @@ class StoreTests(unittest.TestCase):
     def test_seed_coverage_idempotence_and_dates(self):
         stats = self.store.stats()
         self.assertEqual((stats['count'], len(stats['dates']), stats['first_date'], stats['last_date']),
-                         (TOTAL,18,'2026-07-12','2026-11-03'))
+                         (TOTAL,19,'2026-07-12','2026-11-08'))
         self.assertEqual(Knowledge(self.db, ROOT / 'data/knowledge.json').stats()['count'],TOTAL)
         historical = self.store.search(end_date='2026-11-01',limit=1000)
         self.assertEqual(historical['total'],362)
@@ -90,7 +91,7 @@ class StoreTests(unittest.TestCase):
 
     def test_import_export_csv_duplicates_and_atomicity(self):
         result = self.store.import_text('original.csv',(ROOT/'信息清单.csv').read_text(encoding='utf-8-sig'))
-        self.assertEqual(result,{'added':0,'skipped':362})
+        self.assertEqual(result,{'added':0,'skipped':389})
         with self.assertRaises(ValueError):
             self.store.import_text('bad.json',json.dumps([{'name':'有效','function':'可导入'}, {'name':'缺少用途'}]))
         self.assertEqual(self.store.stats()['count'],TOTAL)
@@ -134,8 +135,10 @@ class StoreTests(unittest.TestCase):
         manual = old.add({**row,'function':'用户已补充的 Dify 使用经验'})
         (data/'collections').mkdir()
         shutil.copyfile(BATCH,data/'collections'/BATCH.name)
+        shutil.copyfile(DOUYIN_BATCH,data/'collections'/DOUYIN_BATCH.name)
         upgraded = Knowledge(db,seed)
         self.assertEqual(upgraded.stats()['count'],TOTAL)
+        self.assertEqual(upgraded.search('HairDeck')['items'][0]['date'],'2026-11-08')
         self.assertEqual(upgraded.get(manual['id'])['function'],'用户已补充的 Dify 使用经验')
         imported = upgraded.search('Docling')['items'][0]
         upgraded.update(imported['id'],{**imported,'date':'2026-11-04','name':'Docling 手工修订'},1)
@@ -196,6 +199,17 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.client.get('/.env.local').status_code,404)
         self.assertEqual(self.client.get('/static/../.env.local').status_code,404)
         self.assertEqual(self.client.get('/archive/anything').status_code,404)
+        for archive in ('timeline','markdown','csv'):
+            response = self.client.get('/archive/'+archive)
+            self.assertEqual(response.status_code,200)
+            self.assertIn(b'BV1yvWH6wEnR',response.content)
+        latest = self.client.get('/api/knowledge',params={
+            'start_date':'2026-11-08','end_date':'2026-11-08','limit':100,
+        }).json()
+        self.assertEqual(latest['total'],27)
+        pagekin = next(item for item in latest['items'] if item['name'] == 'Pagekin')
+        self.assertIn('https://github.com/EthanYoQ/Pagekin',pagekin['links'])
+        self.assertIn('Ollama',pagekin['workflow'])
         self.assertEqual(self.client.post('/api/sessions',headers={'Origin':'https://other.example'}).status_code,403)
         self.assertEqual(self.client.get('/api/status',headers={'Host':'other.example'}).status_code,400)
         self.assertEqual(self.client.get('/api/knowledge?start_date=invalid').status_code,400)

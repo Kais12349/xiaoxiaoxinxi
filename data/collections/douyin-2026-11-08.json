@@ -1,0 +1,620 @@
+[
+  {
+    "date": "2026-11-08",
+    "number": 1,
+    "name": "Claude Fable 5.5",
+    "organization": "Anthropic",
+    "category": "模型",
+    "type": "编程与长程任务模型",
+    "news": "灰度测试传闻",
+    "function": "作者提到的 Fable 5.5 面向复杂编程与多步工作。这类模型可以先读取代码库，梳理模块依赖，再制定改动计划、修改代码并运行测试，适合需要跨文件理解的任务。上述用途来自已公开的 Fable 系列定位，5.5 的具体能力仍待确认。",
+    "scenario": "维护旧项目时，交给已开放的 Fable 版本一份错误日志，让它定位触发路径、给出补丁，并补充回归测试。",
+    "workflow": "在 Claude Code 或 Claude API 查看账户可用的正式模型 ID。用独立分支验证编译、测试和改动范围。",
+    "limitations": "5.5 的开放名单、模型 ID、价格和能力均缺少官方确认。评估已开放的版本时应注明实际型号。",
+    "status": "灰度传闻，未获官方确认",
+    "links": [
+      "https://x.com/chetaslua/status/2117224839010459987"
+    ],
+    "additional_links": [
+      "https://platform.claude.com/docs/en/release-notes/overview"
+    ],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "「Claude Fable 5.5」开启灰度测试",
+    "verification": "Anthropic 截至 11 月 11 日的发布记录确认了 Fable 5.2。作者所称 5.5 尚无官方发布或灰度公告可核对。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 2,
+    "name": "Aaronson–Ambainis 猜想（周报称 Claude Model 4 量子计算研究）",
+    "organization": "Periodic Labs（PSI）研究团队",
+    "category": "研究成果",
+    "type": "量子复杂度与形式化证明",
+    "news": "用 AI 辅助证明量子复杂度猜想",
+    "function": "研究团队用内部科研系统和未公开的 Anthropic 模型推进 Aaronson–Ambainis 猜想的证明，并将论证交给 Lean 检查。它展示了如何让模型搜索证明路线、定位条件缺失，并用可重放的形式化证明约束模型给出的数学结论。",
+    "scenario": "量子算法研究者可查看猜想中随机输入分布的条件，以及在这些条件下如何比较量子与经典查询复杂度。",
+    "workflow": "从项目页阅读原问题、论文及 Lean 证明，按项目依赖运行证明检查，追踪定理使用的假设。",
+    "limitations": "结论适用于证明界定的问题和输入条件。团队未公开所用模型的精确版本，公开资料也未提供等效科研服务。",
+    "status": "研究与 Lean 证明已公开",
+    "links": [
+      "https://psi.inc/research/aaronson-ambainis/"
+    ],
+    "additional_links": [],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "「Claude Model 4」攻破量子计算猜想",
+    "verification": "PSI 原文确认使用未公开的 Anthropic 模型，未确认作者所写的 Claude Model 4 型号。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 3,
+    "name": "Images 2.6（GPT-Images 2.6）",
+    "organization": "OpenAI",
+    "category": "模型",
+    "type": "图像生成与编辑",
+    "news": "发布图像模型并支持 GIF",
+    "function": "Images 2.6 可以用文本或参考图生成海报、商品图与其他视觉素材，也能在多轮编辑里对构图、背景或指定元素做局部调整。GIF 可把吉祥物、产品图或分镜做成简短循环动画。官方区分了速度优先的 Flare 和侧重细节与一致性的 Sunburst。",
+    "scenario": "电商团队用同一商品参考图生成促销主图和不同尺寸的社交素材，逐轮调整背景与排版，核对包装和商标。",
+    "workflow": "在 ChatGPT 等开放入口上传参考图，明确要改的元素及需要保留的细节。开发者按公告选择 API 型号与质量参数。",
+    "limitations": "不同入口、型号和质量设置提供的功能与费用有差异。文字、包装和逐帧一致性应在发布前检查。",
+    "status": "官方已发布",
+    "links": [
+      "https://openai.com/index/introducing-images-2-6/"
+    ],
+    "additional_links": [],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "OpenAI上线最强图像模型「GPT-Images 2.6」",
+    "verification": "OpenAI 公告使用 Images 2.6 作为产品名，并列明 GPT-Image-2.6 Flare、Sunburst 及 GIF 相关用法。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 4,
+    "name": "GPT-6 Astra 权重空间编程研究",
+    "organization": "MIT CSAIL 研究团队",
+    "category": "研究成果",
+    "type": "权重空间编程",
+    "news": "用模型直接修改神经网络权重",
+    "function": "研究让 GPT-6 Astra 读取并直接编辑其他神经网络的权重，以观察能否在无需训练梯度的情况下修改模型行为。示例包括提高小模型在数学题上的得分，以及检查游戏策略网络中哪些参数变化会改变行动。",
+    "scenario": "模型研究人员可比较同一个小模型在编辑前后对数学题的解答，并检查收益是否迁移到独立题集。",
+    "workflow": "按研究页面的基线、权重编辑流程和评测设置记录模型版本，再比较编辑前后表现。",
+    "limitations": "MATH-500 从 7.9% 到 48.1% 是 Qwen3.5-0.8B 在该实验中的结果。模型、任务或评测改变后须重新验证。",
+    "status": "研究结果已公开",
+    "links": [
+      "https://rikiyat.github.io/blog/weight-space-programming/"
+    ],
+    "additional_links": [],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "「GPT-6 Astra」逆天修改小模型参数",
+    "verification": "研究作者页面描述了 GPT-6 Astra 编辑 Qwen3.5-0.8B 的权重与基准结果。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 5,
+    "name": "Gemini Omni 1.2 Flash",
+    "organization": "Google",
+    "category": "模型",
+    "type": "视频生成与编辑",
+    "news": "升级视频生成与编辑模型",
+    "function": "Gemini Omni 1.2 Flash 支持用指令与参考素材生成或修改视频，官方介绍支持最长 15 秒的片段。可以给出主体图片、动作要求及运镜描述，也能在已有片段上改动作、场景或视觉元素，并尽量保持主体的外观连续。",
+    "scenario": "广告团队可用一张产品图生成短片预演，再基于原片尝试不同光线与镜头运动，比较哪个更容易展示产品细节。",
+    "workflow": "从官方列出的入口上传图片或已有视频，写清动作、镜头和需要保留的细节。生成后回看逐帧效果。",
+    "limitations": "可用入口、地区、配额和素材限制依服务而异，人物身份、商品细节和多镜头连贯性仍需检查。",
+    "status": "官方已发布",
+    "links": [
+      "https://blog.google/innovation-and-ai/technology/developers-tools/introducing-gemini-omni-1-2-flash/"
+    ],
+    "additional_links": [],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "Google升级全能视频模型「Gemini Omni 1.2 Flash」",
+    "verification": "Google 官方发布页确认该版本、最长 15 秒和视频生成编辑功能。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 6,
+    "name": "Kimi K3.1 Pro 完整权重",
+    "organization": "月之暗面（Moonshot AI）",
+    "category": "模型",
+    "type": "开放权重多模态模型",
+    "news": "发布完整模型权重",
+    "function": "Kimi K3.1-Pro 公布了约 2.8 万亿参数的模型权重及运行说明，面向长文档分析、代码理解、工具调用和图文输入。团队可以按自身数据和算力验证这些能力，例如在同一上下文中综合文字、图表和代码材料。",
+    "scenario": "技术支持团队可把产品手册、错误截图和日志交给模型，要求列出疑似原因、引用证据并生成排查清单。",
+    "workflow": "按 Hugging Face 模型卡配置推理引擎与资源，或使用已提供该型号的托管服务，再用业务样本验收。",
+    "limitations": "完整权重部署的显存、存储和带宽需求很高。下载和分发适用 Kimi K3.1-Pro 专用许可。",
+    "status": "官方权重与专用许可已公开",
+    "links": [
+      "https://huggingface.co/moonshotai/Kimi-K3.1-Pro"
+    ],
+    "additional_links": [
+      "https://huggingface.co/moonshotai/Kimi-K3.1-Pro/blob/main/LICENSE"
+    ],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "Kimi开放「Kimi K3.1 Pro」完整权重",
+    "verification": "月之暗面在官方 Hugging Face 仓库提供模型卡、权重文件和许可证。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 7,
+    "name": "Hy4",
+    "organization": "腾讯混元",
+    "category": "模型",
+    "type": "通用推理与智能体模型",
+    "news": "发布混元 Hy4 正式版",
+    "function": "Hy4 面向长文档理解、代码编写和多步工具调用。接入业务时，可先让模型阅读需求及资料、提取约束，再用调用工具后的结果继续分析。腾讯公告列出 TokenHub、WorkBuddy、CodeBuddy 等可用入口。",
+    "scenario": "研发团队可用 CodeBuddy 分析跨模块报错，定位相关接口与测试，并逐步验证建议的修复。",
+    "workflow": "使用官方列出的产品入口，或从 TokenHub 配置接口与模型 ID。对输出质量、延迟和工具调用成功率做验证。",
+    "limitations": "正式版和 Hy4 Preview 的接口标识、权重和许可应分别查阅。自动写入文件或系统前应确认执行权限。",
+    "status": "正式版已发布，官方确认服务入口",
+    "links": [
+      "https://hy.tencent.ai/research/hy4"
+    ],
+    "additional_links": [
+      "https://www.tencent.com/tencent-launches-hy4-joining-the-ranks-of-the-worlds-leading-open-source-ai-models/"
+    ],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "腾讯开源混元4模型「Hy4」",
+    "verification": "腾讯正式公告将 Hy4 称为开源模型并列出服务渠道。正式版权重下载与许可仍应以对应模型仓库为准。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 8,
+    "name": "Inkling 2 Small",
+    "organization": "Thinking Machines Lab",
+    "category": "模型",
+    "type": "可微调的多模态 MoE 模型",
+    "news": "发布面向微调的多模态模型",
+    "function": "Inkling 2 Small 支持图像输入和可调推理投入。Thinking Machines 给出的规模约为总参数 5940 亿、每个 token 激活约 170 亿。它适合在 Tinker 上实验，用特定业务样本训练模型，以改进格式遵循或垂直任务判断。",
+    "scenario": "可用标注过的故障照片及维修记录，训练模型把图文输入转成固定字段，再用未参与训练的样本验收。",
+    "workflow": "从 Tinker 查看模型可用性，准备训练和验证数据，选择微调方法，并比较效果、推理成本和耗时。",
+    "limitations": "公告的第一阶段在 Tinker 提供闭合权重。后续开放承诺应等实际文件与许可证，现有入口不支持自行部署该权重。",
+    "status": "Tinker 首发，开放权重为后续计划",
+    "links": [
+      "https://thinkingmachines.ai/news/inkling-2-small/"
+    ],
+    "additional_links": [],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "Thinking Machines开源最强小模型「Inkling 2 Small」",
+    "verification": "官方公告写明首发时权重关闭。作者总结里的“开源”未达到实际发布状态。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 9,
+    "name": "Muse Spaces",
+    "organization": "Meta",
+    "category": "应用与智能体",
+    "type": "可定制交互面板",
+    "news": "发布自定义应用面板功能",
+    "function": "Muse Spaces 把自然语言描述转换成 Muse 内可重复使用的互动面板，例如礼物清单、棋盘或简单文字游戏。用户可用后续指令修改字段与界面，并将常用面板放在应用导航里，减少反复从空白对话开始。",
+    "scenario": "做一个家庭礼物管理面板，分别记录收礼人、预算和是否已购买，再按状态筛选。",
+    "workflow": "在有 Spaces 入口的 Muse 应用里描述字段、交互和布局，生成后测试增改查，再加入导航。",
+    "limitations": "入口和开放范围依 Meta rollout 而定。数据导出、第三方系统接入和团队权限需要另行确认。",
+    "status": "官方公布应用功能",
+    "links": [
+      "https://about.fb.com/news/2026/11/introducing-spaces-customize-muse-app/amp/"
+    ],
+    "additional_links": [],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "「Muse」上线应用空间「Spaces」",
+    "verification": "Meta 的功能公告描述了创建、修改和在 Muse 内访问自定义 Spaces。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 10,
+    "name": "42AI",
+    "organization": "42AI",
+    "category": "模型",
+    "type": "行为世界模型",
+    "news": "公布行为世界模型",
+    "function": "42AI 将项目定位为预测不同情境下个人、群体及 AI 智能体的反应。可以输入对参与者和环境的描述、改变规则或事件，再观察平台推演的反应与可能影响因素，用于形成有待验证的决策假设。",
+    "scenario": "产品团队可比较“涨价”“改试用期限”两套规则下，不同用户群可能关注的问题，设计后续访谈和实验。",
+    "workflow": "从官网确认访问方式，明确假设中的人群、背景和可变条件，再对照现实观察或历史数据检验结果。",
+    "limitations": "模拟结果受输入假设和群体代表性影响。供应方的准确性主张需要独立、可复现的对照。",
+    "status": "厂商项目与定位已公开",
+    "links": [
+      "https://42ai.com/"
+    ],
+    "additional_links": [],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "研究员推出行为世界模型「42AI」",
+    "verification": "项目官网描述的是面向人与 AI 智能体的行为模拟，外部效果验证仍待补充。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 11,
+    "name": "HairDeck",
+    "organization": "HairDeck 研究团队",
+    "category": "研究成果",
+    "type": "单图生成发片与 VRM",
+    "news": "公开单图发型生成研究",
+    "function": "HairDeck 从一张角色参考图生成风格化发型，把头发建成可分别编辑的发片，并为发片提供 UV。项目展示了用弹簧骨骼产生随动作摆动的效果，以及把结果导出为 VRM，供虚拟形象工具进一步编辑。",
+    "scenario": "虚拟主播设计师可用立绘生成发型底稿，导入角色模型后调整刘海位置、贴图和摆动强度。",
+    "workflow": "可先在 Hugging Face 演示中上传一张发型参考图，也可按仓库说明在本地推理。导出 VRM 后在角色工具中检查遮挡、穿模和骨骼。",
+    "limitations": "参考图背面的形状需要推断。头模尺度、发片穿插及不同 VRM 查看器的效果要逐一验收。",
+    "status": "推理代码、权重和在线演示已公开",
+    "links": [
+      "https://hyzcluster.github.io/HairDeck/"
+    ],
+    "additional_links": [
+      "https://github.com/hyz317/HairDeck",
+      "https://huggingface.co/spaces/hyz317/HairDeck"
+    ],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "研究员开源3D头发模型「HairDeck」",
+    "verification": "项目页链接到代码、模型与 Hugging Face 演示，并给出发片、UV、弹簧骨骼和 VRM 输出示例。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 12,
+    "name": "Archon",
+    "organization": "Selendis",
+    "category": "模型",
+    "type": "个性化视频剪辑模型",
+    "news": "公布个性化视频剪辑模型",
+    "function": "Selendis 将 Archon 定位为能学习个人剪辑偏好的模型。它围绕创作者选择镜头、安排节奏和形成剪辑习惯来协助剪辑，并在团队编辑环境中提供可继续调整的结果。适合有统一风格、需要反复出片的工作。",
+    "scenario": "短视频团队可以提供已发布成片和同类素材，让系统参考既有开头节奏、转场和删减习惯，先产出一版粗剪。",
+    "workflow": "通过官网确认试用入口和支持的素材格式。用已获授权的旧成片与原素材做对照，检查时间线并人工调整。",
+    "limitations": "学习效果取决于示例数量、素材和风格稳定性。公开页面未充分说明模型权重或所有编辑能力的开放范围。",
+    "status": "厂商项目已公布，可用范围待确认",
+    "links": [
+      "https://selendis.com/"
+    ],
+    "additional_links": [],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "研究员推出剪辑师视频模型「Archon」",
+    "verification": "Selendis 官网公开描述 Archon 的个人剪辑风格学习和协作编辑方向。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 13,
+    "name": "Pangram Image 1.0",
+    "organization": "Pangram",
+    "category": "模型",
+    "type": "AI 图像与视频检测",
+    "news": "发布图像及视频鉴别模型",
+    "function": "Pangram Image 1.0 用来判断图片或视频是否可能含有 AI 生成内容。图片热力图可将审核人员的注意力引向疑似生成或局部修改的区域，便于人工结合素材出处、拍摄信息和编辑记录进一步排查。",
+    "scenario": "编辑部收到一批来稿时，可用检测报告安排优先复核顺序，并回查原文件、发布渠道和授权来源。",
+    "workflow": "将待核对素材提交到可用入口，记录检测结果和可疑区域，再由人工核对独立来源。",
+    "limitations": "压缩、截图、二次编辑和未见过的生成器可能改变结果。检测分数只能提供复核线索。",
+    "status": "官方已发布检测模型",
+    "links": [
+      "https://www.pangram.com/blog/introducing-pangram-image-1-0"
+    ],
+    "additional_links": [],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "研究员推出AI鉴真模型「Pangram Image 1.0」",
+    "verification": "Pangram 发布文明确列出图像、视频检测与图片局部热力图。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 14,
+    "name": "hunch",
+    "organization": "undrgrnd-labs",
+    "category": "开发工具与基础设施",
+    "type": "CPU 运行的智能体决策服务",
+    "news": "公开 CPU 智能体决策服务",
+    "function": "hunch 把一个反复出现的判断任务交给较轻量的本地服务。它利用来自较强教师模型的示例或反馈学习输入嵌入与判断的关系，适合充当智能体的快速分流层，例如判断工具结果是否异常、输入是否可能是提示注入。",
+    "scenario": "自动化客服可先由 hunch 判断用户材料是否要进入人工复核，高置信样本直接分流，难例交给大模型。",
+    "workflow": "按仓库说明运行服务，收集真实正负样本并确定判断标签，再校准置信阈值和教师模型回退机制。",
+    "limitations": "每个判断需要单独训练和验证，面对新型输入可能误判。安全相关决策应保留其它检查。",
+    "status": "官方代码仓库与用法已公开",
+    "links": [
+      "https://github.com/undrgrnd-labs/hunch"
+    ],
+    "additional_links": [],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "工程师开源视觉版Jev「hunch」",
+    "verification": "仓库 README 介绍的是智能体二元判断与 CPU 侧服务，作者的相机说法属于比喻。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 15,
+    "name": "Autopilot（Aura Autopilot）",
+    "organization": "ramenvr",
+    "category": "开发工具与基础设施",
+    "type": "游戏自动试玩与测试",
+    "news": "公开游戏自动试玩工具",
+    "function": "Aura Autopilot 通过游戏引擎接入和 MCP 让智能体操作角色、探索路线并反复试玩。开发团队可用它查找流程卡点、重复跑新手关，或把不易稳定复现的路径记录下来供开发者排查。",
+    "scenario": "每次修改场景碰撞体后，让智能体按起点至终点跑关，记录掉出地图、卡在楼梯或触发失败的位置。",
+    "workflow": "按仓库说明接入 UE5、Unity 6、Godot 4 或 Roblox 的对应方案，设置目标和操作接口，再检查试玩轨迹。",
+    "limitations": "接入和可观测状态由引擎插件及游戏项目决定。覆盖率依测试场景与任务定义而变。",
+    "status": "官方代码仓库与引擎接入说明已公开",
+    "links": [
+      "https://github.com/ramenvr/autopilot"
+    ],
+    "additional_links": [],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "工程师开源游戏智能体「Autopilot」",
+    "verification": "README 列出了引擎接入、MCP 和面向游戏试玩测试的用法。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 16,
+    "name": "Pagekin",
+    "organization": "EthanYoQ",
+    "category": "应用与智能体",
+    "type": "本地优先的 AI 小说创作工具",
+    "news": "公开 AI 小说创作工具",
+    "function": "Pagekin 将世界观设定、人物、提纲、章节正文和修订放在同一写作项目。可导入旧稿，让配置的模型按现有上下文扩写、修改或提出修改意见，适合长期连载里维护大量情节与设定。",
+    "scenario": "续写长篇的第 40 章时，将人物卡和前文线索放在项目内，先检查人物行为、称呼和伏笔是否一致，再起草正文。",
+    "workflow": "按仓库提供的 Windows 或 macOS 方式安装，建立或导入写作项目，配置支持的云端模型或本地 Ollama。",
+    "limitations": "应用本地存储与模型调用是两条链路。使用云端模型时，送去处理的稿件内容受服务方规则约束。",
+    "status": "代码与安装说明已公开",
+    "links": [
+      "https://github.com/EthanYoQ/Pagekin"
+    ],
+    "additional_links": [],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "工程师开源写小说智能体「Pagekin」",
+    "verification": "GitHub 仓库说明了本地优先的写作功能、模型配置及 GPL-3.0 许可。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 17,
+    "name": "STRATA（全球大气模拟）",
+    "organization": "NVIDIA",
+    "category": "研究成果",
+    "type": "全球大气模拟代理模型",
+    "news": "发布大气模拟代理模型权重",
+    "function": "STRATA 学习模拟 SCREAM 这类可解析风暴的全球大气模拟器，通过分块自回归推进温度、湿度与风等大气场，并输出诊断降水。模型卡给出的实验设置约为 4.9 公里分辨率和 10 分钟时间步。它适合尝试快速生成多组模拟用于大气研究。",
+    "scenario": "研究人员可输入相同的初始场，比较代理模型和参考模拟对一次强降雨过程的空间范围和强度变化。",
+    "workflow": "从模型卡下载所需文件，准备满足输入规范的初始大气场，在同一变量与区域下对照参考模拟。",
+    "limitations": "误差可能随时间步累计。业务预报、真实初始数据和气象预警需要对应的业务验证与数据流程。",
+    "status": "官方模型卡与权重仓库已公开",
+    "links": [
+      "https://huggingface.co/nvidia/strata"
+    ],
+    "additional_links": [
+      "https://github.com/NVlabs/STRATA"
+    ],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "英伟达开源天气预测模型「STRATA」",
+    "verification": "NVIDIA 模型卡说明了 SCREAM 模拟目标、变量及运行方法，列明权重采用 OpenMDW 1.1，推理代码仓库采用 Apache-2.0。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 18,
+    "name": "WeVisOne-VL",
+    "organization": "腾讯",
+    "category": "模型",
+    "type": "检测、分割与抠图视觉模型",
+    "news": "公开视觉语言模型与推理代码",
+    "function": "WeVisOne-VL 将检测、定位、计数、OCR、掩膜分割及 alpha 抠图放进同一个视觉语言模型。给定图片与自然语言指令，系统可以按任务输出框、点、读到的文本或前景遮罩，便于集成进图库和商品图流水线。",
+    "scenario": "素材管理工具可让模型数出包装盒并定位标签文字，再抠出主商品供设计师二次排版。",
+    "workflow": "按仓库说明选用 2B 或 4B 权重，准备图片及明确的目标描述，检查每种任务的输出格式。",
+    "limitations": "小字、拥挤目标与发丝边缘应做专项检查。推理与微调能力按仓库当前提供的文件及说明确认。",
+    "status": "推理仓库及 2B、4B 权重已公开",
+    "links": [
+      "https://github.com/Tencent/WeVisOne-VL"
+    ],
+    "additional_links": [
+      "https://huggingface.co/tencent/WeVisOne-VL-2B"
+    ],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "研究员开源全能视觉模型「WeVisOne-VL」",
+    "verification": "腾讯官方 GitHub 仓库列出任务、推理步骤与模型权重链接。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 19,
+    "name": "Mirage 22MB",
+    "organization": "Cactus Compute",
+    "category": "模型",
+    "type": "端侧视觉理解模型",
+    "news": "公布端侧视觉模型",
+    "function": "Mirage 是约 5130 万参数的端侧视觉模型，官方介绍的 2-bit 版本约 22 MB。它能从相机画面读取文字、定位或分割物体，并输出面向业务的结构化结果，适合在手机或可穿戴设备上就地处理小型视觉任务。",
+    "scenario": "仓库人员用手机读取标签文字并定位箱子，把识别到的编号和坐标送到内部盘点应用。",
+    "workflow": "从模型仓库取得权重，按厂商说明在目标设备接入 Cactus 运行时，用同一批样本测量 OCR、检测和分割的效果与延迟。",
+    "limitations": "体积数据对应特定量化版本，实际运行还需要模型外的组件。性能随硬件、图片质量及任务变化。",
+    "status": "模型权重和端侧演示已公开",
+    "links": [
+      "https://cactuscompute.com/blog/mirage"
+    ],
+    "additional_links": [
+      "https://huggingface.co/Cactus-Compute/mirage"
+    ],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "研究员开源手机视觉模型「Mirage 22MB」",
+    "verification": "厂商公告给出参数量和量化体积。官方 Hugging Face 仓库提供 .cact 与 safetensors 权重。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 20,
+    "name": "Recast（MiniMax H3 Max Recast）",
+    "organization": "ElevenLabs / MiniMax",
+    "category": "应用与智能体",
+    "type": "视频人物替换",
+    "news": "接入视频人物替换功能",
+    "function": "ElevenLabs 的 Image & Video 工作台接入 MiniMax H3 Max Recast。输入一段最长 30 秒的原视频与 1 至 4 张人物照片，可以用照片中的人物替换原片中的人物。生成片段沿用原片的时长、比例和声音，最高支持 1080p。",
+    "scenario": "素材已获授权时，可以在同一段广告样片上对比几种演员外观，快速预览替换效果及动作与构图的匹配程度。",
+    "workflow": "在工作台的视频模型列表选择 MiniMax H3 Max Recast，上传原片和参考照片，生成后核对人物身份、遮挡与嘴型。",
+    "limitations": "替换保留原声，配音需要另做。费用与素材时长和设置有关，入口的地区和账户可用性需以页面为准。",
+    "status": "官方文档已列出集成功能",
+    "links": [
+      "https://elevenlabs.io/docs/eleven-creative/playground/image-video"
+    ],
+    "additional_links": [],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "Elevenlabs上线角色替换功能「Recast」",
+    "verification": "ElevenLabs 文档明确列出 MiniMax H3 Max Recast 的素材要求、时长、原声保留及输出规格。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 21,
+    "name": "RelayVSR",
+    "organization": "RelayVSR 研究团队",
+    "category": "研究成果",
+    "type": "视频超分辨率",
+    "news": "公开视频超分辨率研究",
+    "function": "RelayVSR 先用较大的生成模型修复少量关键帧，再让较轻的时序网络借助这些参考细节提升其余帧的分辨率。这样可以减少逐帧运行大模型的成本，并尝试让纹理在视频播放时保持连续。",
+    "scenario": "档案人员可对低清片段做样片测试，重点比较人脸、字幕和移动边缘在放大后是否稳定。",
+    "workflow": "从仓库获取推理代码并下载权重，准备低清片段，按示例配置关键帧间隔和输出尺寸，再与原片逐帧比较。",
+    "limitations": "关键帧生成错误会传到附近帧。放大过程可能补出原片中无法证实的纹理。",
+    "status": "论文、代码与模型文件已公开",
+    "links": [
+      "https://kopperx.github.io/RelayVSR/"
+    ],
+    "additional_links": [
+      "https://github.com/kopperx/RelayVSR",
+      "https://huggingface.co/kopper/RelayVSR"
+    ],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "研究员开源视频超分模型「RelayVSR」",
+    "verification": "项目页描述了关键帧参考与时序传播的两阶段方法，并提供代码和模型链接。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 22,
+    "name": "Frameboy",
+    "organization": "World Labs",
+    "category": "应用与智能体",
+    "type": "实时世界模型演示",
+    "news": "发布实时场景交互演示",
+    "function": "Frameboy 是 World Labs 为优化后 Atlas 提供的浏览器交互演示。操作者移动虚拟摄像机，服务器随镜头方向生成后续画面，可用于实时查看同一场景的多个视角。官方展示了最高约 15 帧每秒的云端交互与 Viewfinder 集成。",
+    "scenario": "在概念设计中快速比较虚拟展厅的视线和动线，例如从入口转向展台时观察画面如何延伸。",
+    "workflow": "从发布页进入 Frameboy 或 Viewfinder 的对应入口，按演示指引操纵镜头，观察转向和返回时的稳定性。",
+    "limitations": "帧率受服务和网络影响。演示中的空间与物体可以由模型补全，实际尺寸和位置需要独立验证。",
+    "status": "浏览器研究演示已公开",
+    "links": [
+      "https://www.worldlabs.ai/blog/atlas-realtime"
+    ],
+    "additional_links": [],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "World Labs上线实时世界模型「Frameboy」",
+    "verification": "官方公告将 Frameboy 定义为 Atlas 实时能力的浏览器演示。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 23,
+    "name": "Lyra 2",
+    "organization": "NVIDIA 研究团队",
+    "category": "研究成果",
+    "type": "可探索场景生成与三维重建",
+    "news": "公开三维环境生成研究",
+    "function": "Lyra 2 把镜头路径作为生成条件，先得到沿路径移动的画面，再尝试重建为可从新视角查看的 3D 场景，例如高斯表示或网格。它的实际用途是快速制作环境原型，并比较回到同一地点时的场景一致性。",
+    "scenario": "游戏团队可为虚拟仓库生成一段巡视路线和初步三维场景，用来评估视线遮挡和镜头构图。",
+    "workflow": "从项目页进入代码或模型入口，导入参考图并用图形界面设置镜头路线，生成后在三维查看器检查回环，也可试导入 Isaac Sim。",
+    "limitations": "补全结构和尺度来自生成，碰撞几何、材质及测量精度应在模拟或生产接入前单独验证。",
+    "status": "论文、代码与权重已公开",
+    "links": [
+      "https://nv-tlabs.github.io/Project-Lyra/"
+    ],
+    "additional_links": [
+      "https://arxiv.org/abs/2604.13036"
+    ],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "英伟达开源世界模型「Lyra 2」",
+    "verification": "项目页明确标注 2026 年 4 月公开论文、权重和推理代码，7 月补充图形界面和训练代码。11 月 8 日是周报收录日期。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 24,
+    "name": "FlowHMR",
+    "organization": "FlowHMR 研究团队",
+    "category": "研究成果",
+    "type": "单目视频人体动作重建",
+    "news": "公开人体运动重建研究",
+    "function": "FlowHMR 从单个摄像机拍摄的人体动作视频推断三维运动。它结合流匹配和物理约束，减少脚滑、穿地等问题。项目还演示了把人体动作重定向到仿真中的 Unitree G1 人形机器人。",
+    "scenario": "动画师可用普通相机记录起步、转身和蹲下动作，重建骨骼轨迹后作为角色动画的初始素材。",
+    "workflow": "选用人体清晰的视频并按项目流程重建，再检查接地、遮挡段和关节轨迹。机器人动作可先在仿真中重定向。",
+    "limitations": "单目画面存在深度歧义，遮挡会影响结果。仿真动作迁移到实机仍需处理关节限位、控制器和稳定性。",
+    "status": "代码、模型和仿真演示已公开",
+    "links": [
+      "https://flowhmr.github.io/"
+    ],
+    "additional_links": [
+      "https://github.com/flowhmr/flowhmr"
+    ],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "研究员开源动作捕捉模型「FlowHMR」",
+    "verification": "项目页提供 FlowHMR 代码、权重与 Hugging Face 演示，并展示 Unitree G1 仿真重定向。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 25,
+    "name": "Möbius",
+    "organization": "Möbius 研究团队",
+    "category": "研究成果",
+    "type": "人体动作理解与生成",
+    "news": "公开人体动作理解与生成研究",
+    "function": "Möbius 将人体动作表示和自然语言关联起来，支持从文字合成三维动作，也可以从已有动作生成描述。可用于补充动画素材库，或把动作片段按语义建立可检索的标签。",
+    "scenario": "动画师可搜索“向左闪避后站稳”，筛出已有动作，并用文字生成候选片段补足缺少的变体。",
+    "workflow": "从项目页查看文本和动作表示的输入要求，运行可用的模型或示例，再将骨骼轨迹映射到目标角色。",
+    "limitations": "动作持续时间、组合与角色接触效果需验证。项目页已展示研究结果，周报所说的代码或权重开放尚待核实。",
+    "status": "研究项目与双向任务演示已公开",
+    "links": [
+      "https://jiazhishu.github.io/mobius/"
+    ],
+    "additional_links": [],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "研究员开源动作生成模型「Möbius」",
+    "verification": "研究项目页同时展示文字到动作及动作到文字两类任务。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 26,
+    "name": "MOSS-Live 1.0",
+    "organization": "MOSS 团队",
+    "category": "模型",
+    "type": "全双工实时多模态交互模型",
+    "news": "发布实时多模态交互模型",
+    "function": "MOSS-Live 1.0 面向边听边说的实时语音对话，支持用户插话，并可结合视频或共享屏幕理解上下文。官方还展示同传和后台异步调用工具，适合边讲解边操作的实时助手。",
+    "scenario": "远程技术支持可让用户共享屏幕、说出卡住的步骤，助手基于当前画面回答，用户随时插话补充。",
+    "workflow": "按 MOSS API 文档创建实时 WebSocket 会话，发送麦克风音频和可选画面流，接收语音与文本事件，测试插话、噪声和工具超时。",
+    "limitations": "端到端延迟取决于音视频、网络和部署。使用云端接口时，应确认音视频内容是否适合发送到外部服务。",
+    "status": "官方实时 API 已开放测试，权重开放待核实",
+    "links": [
+      "https://www.moss.cn/models/moss-live"
+    ],
+    "additional_links": [
+      "https://platform.moss.cn/docs/models/moss-live/"
+    ],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "Moss开源实时语音模型「MOSS-Live 1.0」",
+    "verification": "官方 API 文档确认了 moss-live-1.0 的测试版模型 ID 与 WebSocket 接入，尚未找到该版本的官方权重仓库。"
+  },
+  {
+    "date": "2026-11-08",
+    "number": 27,
+    "name": "uni-robot-agent",
+    "organization": "Open-RUA",
+    "category": "机器人与硬件",
+    "type": "机器人智能体工具框架",
+    "news": "公开机器人智能体运行框架",
+    "function": "uni-robot-agent 为智能体提供接入仿真器和机器人的统一工具层。开发者可以让 Codex 或 Claude Code 通过已定义的动作接口调用环境，结合 Python SDK 和运行面板观察任务执行，也可以添加新的机器人适配器。",
+    "scenario": "先在仿真中测试抓取任务，逐步查看观察数据、动作参数和结果，再评估是否值得适配实际机械臂。",
+    "workflow": "按仓库安装 Python SDK、配置智能体运行时并启动兼容仿真环境，编写动作接口与验收条件。",
+    "limitations": "兼容程度取决于环境和适配器。真机测试需要独立验证工作空间、关节限位与急停机制。",
+    "status": "代码、文档及 MIT 许可已公开",
+    "links": [
+      "https://github.com/Open-RUA/uni-robot-agent"
+    ],
+    "additional_links": [],
+    "video": "https://www.bilibili.com/video/BV1yvWH6wEnR/",
+    "comment": "https://www.bilibili.com/video/BV1yvWH6wEnR/#reply323375268432",
+    "reported_claim": "研究员开源机器人Harness「uni-robot-agent」",
+    "verification": "Open-RUA 仓库提供运行时、适配器、控制面板与许可说明。"
+  }
+]
